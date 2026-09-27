@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* brand */
+  --color-navy-950: #15181c;
+  --color-navy-900: #1d2126;
+  --color-navy-800: #272c33;
+  --color-navy-700: #343a42;
+  --color-primary: #1f5ea8;
+  --color-primary-hover: #184c8a;
+  --color-primary-soft: #edf3fa;
+
+  /* chart roles (validated reference palette, light surface) */
+  --color-series-1: #2a78d6;
+  --color-series-2: #eb6834;
+  --color-series-3: #1baf7a;
+  --color-series-4: #eda100;
+  --color-series-5: #e87ba4;
+  --color-series-6: #008300;
+  --color-series-7: #4a3aa7;
+  --color-series-8: #e34948;
+
+  --animate-ink: ink 2.4s ease-in-out 0.4s both;
+
+  @keyframes ink {
+    from {
+      stroke-dashoffset: 520;
+      fill-opacity: 0;
+    }
+    70% {
+      stroke-dashoffset: 0;
+      fill-opacity: 0;
+    }
+    to {
+      stroke-dashoffset: 0;
+      fill-opacity: 1;
+    }
+  }
+}
+
+@layer base {
+  html,
+  body {
+    background: #eef0f3;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    font-family: var(--font-sans);
+    
+  }
+  ::selection {
+    background: #bfdbfe;
+  }
+}
+
+@layer components {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .katex-display {
+    margin: 0.35rem 0 !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.2rem 0;
+    scrollbar-width: thin;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-ink {
+      animation: none !important;
+    }
+  }
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+  }
+  .grid-bg {
+    background-image: linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
