@@ -48,6 +48,9 @@ export function Header({
         </a>
 
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+          <a href="#" className="hidden text-[12.5px] text-slate-500 underline-offset-4 hover:text-slate-900 hover:underline lg:inline">
+            ← Three-phase workflow (1-D/2-D/3-D)
+          </a>
           <div className="relative" ref={exRef}>
             <Button variant="secondary" size="sm" onClick={() => setExOpen((o) => !o)} aria-expanded={exOpen} aria-haspopup="menu">
               <BookOpen />

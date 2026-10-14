@@ -1,3 +1,4 @@
+import type { RefinementResult, Setup, WorkflowResult } from '@/workflow/types'
 import type {
   ApiError,
   Example,
@@ -75,4 +76,21 @@ export async function downloadPdfReport(type: ProblemType, body: SteadyRequest |
     body: JSON.stringify({ problem_type: type, [type]: body }),
   })
   return res.blob()
+}
+
+// ------------------------------------------------ three-phase workflow (v2)
+
+export async function simulateWorkflow(setup: Setup, signal?: AbortSignal): Promise<WorkflowResult> {
+  const res = await request<WorkflowResult>('/api/v2/simulate', { method: 'POST', body: JSON.stringify(setup), signal })
+  return res.json()
+}
+
+export async function validateWorkflow(setup: Setup, signal?: AbortSignal): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  const res = await request('/api/v2/validate', { method: 'POST', body: JSON.stringify(setup), signal })
+  return res.json()
+}
+
+export async function refineWorkflow(setup: Setup): Promise<RefinementResult> {
+  const res = await request<RefinementResult>('/api/v2/refine', { method: 'POST', body: JSON.stringify(setup) })
+  return res.json()
 }
