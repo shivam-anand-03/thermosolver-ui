@@ -30,7 +30,7 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173**. In development the Vite server proxies every `/api/...` request to `http://127.0.0.1:8000`, so no CORS setup is needed.
+Open **http://localhost:5173** for the landing page and **http://localhost:5173/solver/** for the app. In development the Vite server proxies every `/api/...` request to `http://127.0.0.1:8000`, so no CORS setup is needed.
 
 If the API isn't running you'll see *"Cannot reach the ThermoSolve API. Make sure the backend is running on port 8000."*
 
@@ -72,6 +72,8 @@ API errors (HTTP 422 with `{success: false, error, details, kind}`) are shown in
 ## 6. Project structure
 
 ```
+index.html                 landing page served at / (plain HTML, CSS and JS, no React)
+solver/index.html          entry for the solver app, served at /solver/
 src/
   main.tsx, App.tsx          entry point
   pages/SolverPage.tsx       the single page: wizard + results
@@ -109,5 +111,7 @@ The app is deployed to Vercel as a static Vite site with this repository at the 
 | Output Directory | `dist` |
 | Node.js Version | 22.x |
 | Environment | `VITE_API_URL=<API base URL>` |
+
+The build emits two pages: `dist/index.html` is the landing page at `/`, and `dist/solver/index.html` is the app at `/solver/`.
 
 See `DEPLOYMENT.md` in the project workspace for the full walkthrough, including the Render side and troubleshooting.
