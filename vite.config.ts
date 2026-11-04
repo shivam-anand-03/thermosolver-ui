@@ -8,10 +8,12 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
     rollupOptions: {
-      // Two pages: the landing page at / and the solver app at /solver/
+      // Pages: landing at /, solver app at /solver/, and the legal pages at /terms/ and /privacy/
       input: {
         home: path.resolve(import.meta.dirname, 'index.html'),
         solver: path.resolve(import.meta.dirname, 'solver/index.html'),
+        terms: path.resolve(import.meta.dirname, 'terms/index.html'),
+        privacy: path.resolve(import.meta.dirname, 'privacy/index.html'),
       },
     },
   },

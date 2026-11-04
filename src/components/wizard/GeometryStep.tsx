@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field, UnitSelect } from '@/components/ui/field'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { Simulation } from '@/hooks/useSimulation'
 import { num } from '@/lib/form'
 import { fmt } from '@/lib/format'
@@ -20,7 +21,7 @@ export function GeometryStep({ sim }: { sim: Simulation }) {
   return (
     <div>
       <StepHeader step={2} title="Geometry and mesh" description="Define the slab length and the number of nodes. The grid spacing Δx follows automatically from Δx = L/(N−1)." />
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <Card>
           <CardHeader>
             <CardTitle>Domain</CardTitle>
@@ -63,10 +64,10 @@ export function GeometryStep({ sim }: { sim: Simulation }) {
                 }
               />
             )}
-            <div className="flex items-center justify-between rounded border border-slate-200 px-3 py-2.5">
+            <div className="flex items-center justify-between rounded-md border px-3 py-2.5">
               <div>
                 <Label htmlFor="custom-mesh">Advanced / custom mesh</Label>
-                <p className="text-xs text-slate-500">Enter Δx instead of N</p>
+                <p className="text-xs text-muted-foreground">Enter Δx instead of N</p>
               </div>
               <Switch
                 id="custom-mesh"
@@ -124,32 +125,30 @@ export function GeometryStep({ sim }: { sim: Simulation }) {
             </CardHeader>
             <CardContent>
               {ok ? (
-                <div className="scroll-thin max-h-64 overflow-auto rounded border border-slate-200">
-                  <table className="w-full text-[13px] tabular">
-                    <thead className="sticky top-0 bg-slate-50 text-left text-xs text-slate-500">
-                      <tr>
-                        <th className="px-3 py-2 font-medium">Node</th>
-                        <th className="px-3 py-2 font-medium">x-coordinate</th>
-                        <th className="px-3 py-2 font-medium">x [{u}]</th>
-                        <th className="px-3 py-2 font-medium">Unknown</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Array.from({ length: shownRows }, (_, i) => (
-                        <tr key={i} className="border-t border-slate-100">
-                          <td className="px-3 py-1.5 font-medium">{i + 1}</td>
-                          <td className="px-3 py-1.5 text-slate-600">
-                            <Tex math={i === 0 ? '0' : i === derived.N - 1 ? 'L' : i === 1 ? String.raw`\Delta x` : String.raw`${i}\Delta x`} />
-                          </td>
-                          <td className="px-3 py-1.5 font-mono">{fmt(fromMetres(i * derived.dx, u), 6)}</td>
-                          <td className="px-3 py-1.5">
-                            <Tex math={`T_{${i + 1}}`} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <Table containerClassName="max-h-64 overflow-auto rounded-md border" className="text-[13px] tabular">
+                  <TableHeader className="sticky top-0 z-10 bg-muted">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="px-3">Node</TableHead>
+                      <TableHead className="px-3">x-coordinate</TableHead>
+                      <TableHead className="px-3">x [{u}]</TableHead>
+                      <TableHead className="px-3">Unknown</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.from({ length: shownRows }, (_, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="px-3 font-medium">{i + 1}</TableCell>
+                        <TableCell className="px-3 text-muted-foreground">
+                          <Tex math={i === 0 ? '0' : i === derived.N - 1 ? 'L' : i === 1 ? String.raw`\Delta x` : String.raw`${i}\Delta x`} />
+                        </TableCell>
+                        <TableCell className="px-3 font-mono">{fmt(fromMetres(i * derived.dx, u), 6)}</TableCell>
+                        <TableCell className="px-3">
+                          <Tex math={`T_{${i + 1}}`} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               ) : (
                 <Callout tone="warning">Enter a valid length and node count to generate the mesh.</Callout>
               )}

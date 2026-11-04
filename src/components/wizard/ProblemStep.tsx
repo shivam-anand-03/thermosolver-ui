@@ -1,8 +1,9 @@
 import { Tex } from '@/components/math/Tex'
 import { Card } from '@/components/ui/card'
+import { RadioGroup, RadioGroupCard } from '@/components/ui/radio-group'
 import { Segmented } from '@/components/ui/segmented'
 import type { Simulation } from '@/hooks/useSimulation'
-import { cn } from '@/lib/utils'
+import type { ProblemType } from '@/types/solver'
 import { StepHeader } from './common'
 
 const TYPES = [
@@ -27,43 +28,35 @@ export function ProblemStep({ sim }: { sim: Simulation }) {
   return (
     <div>
       <StepHeader step={1} title="Problem type" description="Pick the kind of conduction problem to solve in a 1-D plane slab with constant properties." />
-      <div role="radiogroup" aria-label="Problem type" className="grid gap-3 md:grid-cols-2">
-        {TYPES.map((t) => {
-          const active = form.problemType === t.id
-          return (
-            <button
-              key={t.id}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              onClick={() => sim.setProblemType(t.id)}
-              className={cn(
-                'rounded-md border bg-white p-4 text-left focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none',
-                active ? 'border-primary ring-1 ring-primary' : 'border-slate-300 hover:border-slate-400',
-              )}
-            >
-              <div className="flex items-center gap-2.5">
-                <span className={cn('grid size-4 place-items-center rounded-full border', active ? 'border-primary' : 'border-slate-400')}>
-                  {active && <span className="size-2 rounded-full bg-primary" />}
-                </span>
-                <span className="text-[15px] font-semibold text-slate-900">{t.title}</span>
-              </div>
-              <p className="mt-2 text-[13px] text-slate-600">{t.text}</p>
-              <div className="mt-3 border-t border-slate-200 pt-2 text-slate-800">
-                <Tex math={t.eq} block />
-              </div>
-              <p className="mt-1 text-[12px] text-slate-500">
-                Inputs: <span className="font-mono">{t.needs}</span>
-              </p>
-            </button>
-          )
-        })}
-      </div>
+      <RadioGroup
+        aria-label="Problem type"
+        value={form.problemType}
+        onValueChange={(v) => sim.setProblemType(v as ProblemType)}
+        className="gap-3 md:grid-cols-2"
+      >
+        {TYPES.map((t) => (
+          <RadioGroupCard key={t.id} value={t.id} className="group/type items-stretch justify-start gap-0 p-4">
+            <div className="flex items-center gap-2.5">
+              <span className="grid size-4 place-items-center rounded-full border border-muted-foreground/60 group-data-[state=checked]/type:border-primary">
+                <span className="hidden size-2 rounded-full bg-primary group-data-[state=checked]/type:block" />
+              </span>
+              <span className="text-[15px] font-semibold text-foreground">{t.title}</span>
+            </div>
+            <p className="mt-2 text-[13px] text-muted-foreground">{t.text}</p>
+            <div className="mt-3 border-t pt-2 text-foreground">
+              <Tex math={t.eq} block />
+            </div>
+            <p className="mt-1 text-[12px] text-muted-foreground">
+              Inputs: <span className="font-mono">{t.needs}</span>
+            </p>
+          </RadioGroupCard>
+        ))}
+      </RadioGroup>
 
       <Card className="mt-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="text-sm font-medium text-slate-900">Temperature scale</div>
-          <p className="text-[13px] text-slate-500">Used for inputs and results. Gradients (K/m and °C/m are the same) and heat flux are not affected.</p>
+          <div className="text-sm font-medium text-foreground">Temperature scale</div>
+          <p className="text-[13px] text-muted-foreground">Used for inputs and results. Gradients (K/m and °C/m are the same) and heat flux are not affected.</p>
         </div>
         <Segmented
           ariaLabel="Temperature unit"

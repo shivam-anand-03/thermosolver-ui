@@ -73,7 +73,7 @@ export function ProfileChart({
             {...axisProps}
           />
           <Tooltip
-            cursor={{ stroke: '#94a3b8', strokeDasharray: '3 3' }}
+            cursor={{ stroke: 'var(--chart-axis)', strokeDasharray: '3 3' }}
             content={({ active, payload }) => {
               if (!active || !payload?.length) return null
               const p = payload[0].payload as Record<string, number>
@@ -105,8 +105,8 @@ export function ProfileChart({
               stroke={s.color}
               strokeWidth={2}
               strokeDasharray={s.dashed ? '5 4' : undefined}
-              dot={s.markers !== false && !dense ? { r: 4, fill: s.color, stroke: 'white', strokeWidth: 2 } : false}
-              activeDot={{ r: 6, stroke: 'white', strokeWidth: 2 }}
+              dot={s.markers !== false && !dense ? { r: 4, fill: s.color, stroke: 'var(--ui-surface)', strokeWidth: 2 } : false}
+              activeDot={{ r: 6, stroke: 'var(--ui-surface)', strokeWidth: 2 }}
               isAnimationActive={false}
               connectNulls
             />

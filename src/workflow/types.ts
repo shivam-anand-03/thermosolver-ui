@@ -28,7 +28,7 @@ export interface FaceBC {
 
 export interface Setup {
   preprocessor: {
-    problem: { title: string; physics: Physics; time_mode: TimeMode; dimension: Dim; source: { q0: number; beta: number } }
+    problem: { title: string; physics: Physics; time_mode: TimeMode; dimension: Dim; source: { q0: number; beta: number; expression?: string | null; expression_input?: string } }
     geometry: { length: number; width: number; height: number; nx: number; ny: number; nz: number }
     velocity: { u: number; v: number; w: number }
     solid: Material
@@ -89,7 +89,7 @@ export interface WorkflowResult {
     time_mode: TimeMode
     dimension: Dim
     governing_latex: string
-    source: { q0: number; beta: number }
+    source: { q0: number; beta: number; expression?: string | null }
     material: { k: number; rho_cp: number; alpha: number }
     velocity: number[]
     grid: { kind: 'vertex' | 'cell'; counts: number[]; lengths: number[]; spacing: number[]; n: number; axis_coords: number[][] }

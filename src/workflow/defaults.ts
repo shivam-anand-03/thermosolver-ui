@@ -137,6 +137,19 @@ export const EXAMPLES: WorkflowExample[] = [
     }),
   },
   {
+    id: 'sine-source',
+    title: 'Custom source q‴ = 5×10⁵ sin(πx/L)',
+    description: 'Steel wall at 20 °C on both faces with a sine-shaped generation profile typed in the expression editor.',
+    tags: ['1-D', 'steady', 'f(x) source'],
+    setup: make({
+      preprocessor: {
+        problem: { title: 'Wall with a sine-shaped heat source', source: { q0: 0, beta: 0, expression: '500000 * sin(pi * x / L)', expression_input: '5e5 sin(pi x / L)' } },
+        geometry: { length: 0.1, nx: 41 },
+        boundaries: { x_min: bc('temperature', 20), x_max: bc('temperature', 20) },
+      },
+    }),
+  },
+  {
     id: 'flux-conv',
     title: 'Heated wall cooled by convection',
     description: 'Heat flux 2 kW/m² on the left face; convection to 25 °C air (h = 50 W/m²K) on the right.',
@@ -298,10 +311,10 @@ export function nodeCount(s: Setup): number {
 export const LIMITS = { direct: 2500, iterative: 10000, perAxis: 401 }
 
 /** Governing equation (mirrors runner.governing_latex). */
-export function governingLatex(physics: Physics, transient: boolean, dim: Dim): string {
+export function governingLatex(physics: Physics, transient: boolean, dim: Dim, customSource = false): string {
   const lap = { 1: String.raw`\frac{\partial^2 T}{\partial x^2}`, 2: String.raw`\left(\frac{\partial^2 T}{\partial x^2} + \frac{\partial^2 T}{\partial y^2}\right)`, 3: String.raw`\nabla^2 T` }[dim]
   const adv = { 1: String.raw`u\frac{\partial T}{\partial x}`, 2: String.raw`u\frac{\partial T}{\partial x} + v\frac{\partial T}{\partial y}`, 3: String.raw`\mathbf{u}\cdot\nabla T` }[dim]
-  const src = String.raw`q_0 + \beta T`
+  const src = customSource ? String.raw`f(\mathbf{x}) + \beta T` : String.raw`q_0 + \beta T`
   if (physics === 'conduction') return `${transient ? String.raw`\rho c_p\frac{\partial T}{\partial t} = ` : '0 = '}k\\,${lap} + ${src}`
   const lhs = transient ? String.raw`\rho c_p\left(\frac{\partial T}{\partial t} + ${adv}\right)` : String.raw`\rho c_p\left(${adv}\right)`
   return physics === 'convection' ? `${lhs} = ${src}` : `${lhs} = k\\,${lap} + ${src}`

@@ -3,281 +3,378 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>ThermoSolve</title>
-<meta name="description" content="ThermoSolve is an educational finite-difference solver for heat conduction. Set up a steady or transient problem and read every intermediate quantity: Δx, every matrix row, every row operation and every back-substitution line." />
-<meta property="og:title" content="ThermoSolve" />
-<meta property="og:description" content="The heat equation, solved with nothing hidden. An educational finite-difference solver that shows every row operation." />
+<title>CFD Solver</title>
+<meta name="description" content="CFD Solver sets up conduction and convection problems, solves them with hand-written FDM, FVM and FEM solvers, and shows every matrix row, row operation and iteration beside the exact solution." />
+<meta property="og:title" content="CFD Solver" />
+<meta property="og:description" content="Solve the heat equation and see every step: assembly, elimination, back substitution and validation." />
+<meta property="og:image" content="/screens/results-2d-plate-light-1600.webp" />
+<meta name="theme-color" content="#ffffff" />
 <link rel="icon" type="image/png" href="/favicon.png" />
 <link rel="apple-touch-icon" href="/favicon.png" />
+<script>
+  // Same theme key as the solver app, so both pages match. Falls back to the OS setting.
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem('thermosolve-theme'); } catch (e) {}
+    if (!t) t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    if (t === 'dark') document.documentElement.classList.add('dark');
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Mrs+Saint+Delafield&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Mrs+Saint+Delafield&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.21/katex.min.css" />
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.21/katex.min.js"></script>
 <style>
-/* Layout: a lab notebook on the app's 24 px grid. Sticky white header, white cards with slate rules
-   on the #eef0f3 ground, two live demos, and one dark navy panel for the API. Light only, like the app. */
+/* Gold and white (design.md): white page, near-black Inter at weight 500 with tight tracking, gold accents,
+   pill controls, product screens in rounded warm frames. Dark mode: black with the same gold. */
 :root {
-  --bg: #eef0f3; --surface: #ffffff; --surface-2: #f8fafc;
-  --fg: #0f172a; --fg-2: #334155; --muted: #475569; --faint: #64748b; --fainter: #94a3b8;
-  --line: #cbd5e1; --line-soft: #e2e8f0; --line-faint: #f1f5f9;
-  --primary: #1f5ea8; --primary-hover: #184c8a; --primary-soft: #edf3fa; --ring: rgba(59, 130, 246, .5);
-  --navy-950: #15181c; --navy-900: #1d2126; --navy-800: #272c33; --navy-700: #343a42;
-  --cool: #2a78d6; --hot: #eb6834;
-  --pre: #2a78d6; --pre-soft: #edf4fd; --pre-ring: #b7d3f6; --pre-text: #1c5cab;
-  --sol: #4a3aa7; --sol-soft: #f1effa; --sol-ring: #cfc8ee; --sol-text: #3d2f8f;
-  --post: #0f8a5f; --post-soft: #e9f7f1; --post-ring: #b4e3cf; --post-text: #0b6b4a;
-  --ok-line: #a7f3d0; --ok-soft: #ecfdf5; --ok-text: #047857;
-  --warn-line: #fde68a; --warn-soft: #fffbeb; --warn-text: #92400e;
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bg: #ffffff; --bg-2: #fafaf8; --bg-3: #f4f4f1;
+  --ink: #121212; --ink-2: #3d3d39; --muted: #6e6e6a; --faint: #a3a39c;
+  --line: #e9e9e4; --line-2: #dcdcd5;
+  --gold: #d4a12f; --gold-hover: #c28f22; --gold-ink: #856a29; --gold-text: #b07d1f; --gold-soft: #fdf8ea; --gold-line: #f0dfb4;
+  --frame-top: #fff4e7; --frame-bot: #fefefe;
+  --on-gold: #121212; --nav-bg: rgba(255, 255, 255, .85); --shadow: 0 12px 32px -16px rgba(18, 18, 18, .18); --lift: 0 30px 60px -30px rgba(18, 18, 18, .25);
+  --band: #121212; --band-ink: #fafaf8; --band-muted: #a3a39c; --band-gold: #e9c66b;
+  --code-bg: #fafaf8; --k: #855f12; --s: #2f6b47; --n: #b4541f; --cm: #a3a39c;
+  --ok: #047857; --ok-soft: #ecfdf5; --ok-line: #a7f3d0; --bad: #b91c1c;
+  --chart-grid: #ecebe6; --node-stroke: #121212;
+  --grid-line: rgba(18, 18, 18, .075); --grid-sq: #d4a12f; --grid-sq-max: .22; --grid-hover: rgba(212, 161, 47, .16);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-script: "Mrs Saint Delafield", cursive;
-  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
-  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
-  --maxw: 1200px;
+  --gl: max(20px, env(safe-area-inset-left, 0px)); --gr: max(20px, env(safe-area-inset-right, 0px));
+  --maxw: 1232px; --ease: cubic-bezier(.2, .7, .2, 1);
   color-scheme: light;
 }
+:root.dark {
+  --bg: #000000; --bg-2: #0a0a0a; --bg-3: #151515;
+  --ink: #f5f5f5; --ink-2: #d2d2d2; --muted: #9b9b9b; --faint: #6e6e6e;
+  --line: #262626; --line-2: #333333;
+  --gold: #d4a536; --gold-hover: #e0b54f; --gold-ink: #e0b54f; --gold-text: #e8c46e; --gold-soft: #1f190c; --gold-line: #3a2e14;
+  --frame-top: #1a1409; --frame-bot: #0a0a0a;
+  --on-gold: #000000; --nav-bg: rgba(10, 10, 10, .8); --shadow: 0 12px 32px -16px rgba(0, 0, 0, .8); --lift: 0 30px 60px -30px rgba(0, 0, 0, .9);
+  --band: #0f0c06; --band-ink: #f5f5f5; --band-muted: #9b9b9b; --band-gold: #e8c46e;
+  --code-bg: #0d0d0d; --k: #e8c46e; --s: #8fdcb9; --n: #f6b48a; --cm: #6e6e6e;
+  --ok: #6fd3a6; --ok-soft: #0c1712; --ok-line: #1d3d2f; --bad: #f28b8b;
+  --chart-grid: #222222; --node-stroke: #f5f5f5;
+  --grid-line: rgba(255, 255, 255, .07); --grid-sq: #d4a536; --grid-sq-max: .2; --grid-hover: rgba(212, 165, 54, .2);
+  color-scheme: dark;
+}
 *, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-sans); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
-::selection { background: #bfdbfe; }
-img { max-width: 100%; height: auto; }
+html { scroll-behavior: smooth; scroll-padding-top: 96px; scrollbar-color: var(--gold) var(--bg-2); }
+/* gold scrollbar (Chromium and Safari use the pseudo-elements; Firefox and new Chromium use scrollbar-color) */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--bg-2); }
+::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 999px; border: 3px solid var(--bg-2); }
+::-webkit-scrollbar-thumb:hover { background: var(--gold-hover); }
+::-webkit-scrollbar-corner { background: var(--bg-2); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--font-sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+::selection { background: var(--gold-line); }
+img { max-width: 100%; height: auto; display: block; }
 a { color: inherit; }
 [hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 6px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.wrap { max-width: var(--maxw); margin-inline: auto; padding-left: var(--gutter-l); padding-right: var(--gutter-r); }
+.wrap { max-width: var(--maxw); margin-inline: auto; padding-left: var(--gl); padding-right: var(--gr); }
 .mono { font-family: var(--font-mono); }
-.tabular { font-variant-numeric: tabular-nums; }
+h1, h2, h3 { text-wrap: balance; margin: 0; font-weight: 500; }
+.lead, .sub, .band p, .grid4 p, .phase > p { text-wrap: pretty; }
+p { margin: 0; }
 .ic { width: 16px; height: 16px; flex-shrink: 0; }
-h1, h2, h3 { text-wrap: balance; }
-:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.gold { color: var(--gold-text); }
+.eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--gold-ink); }
+.eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+.eyebrow.pill { padding: 7px 15px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); }
 
-/* buttons and badges mirror the app's primitives */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; border-radius: 4px; font: 500 14px/1 var(--font-sans); height: 32px; padding: 0 14px; border: 1px solid transparent; cursor: pointer; text-decoration: none; transition: background-color .15s, border-color .15s; }
-.btn-primary { background: var(--primary); color: #fff; }
-.btn-primary:hover { background: var(--primary-hover); }
-.btn-secondary { border-color: var(--line); background: var(--surface); color: #1e293b; }
-.btn-secondary:hover { background: var(--surface-2); }
-.btn-dark { border-color: rgba(255, 255, 255, .15); background: transparent; color: #e2e8f0; }
-.btn-dark:hover { background: rgba(255, 255, 255, .1); }
-.btn-sm { height: 32px; padding: 0 12px; font-size: 13px; }
-.btn-lg { height: 40px; padding: 0 20px; font-size: 15px; }
-.btn[aria-pressed="true"] { background: var(--primary-hover); }
-.badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 3px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; padding: 1px 6px; font-size: 11px; font-weight: 500; line-height: 1.45; white-space: nowrap; }
-.badge-neutral { border-color: var(--line-soft); background: var(--surface-2); color: var(--muted); }
-.badge-success { border-color: var(--ok-line); background: var(--ok-soft); color: var(--ok-text); }
-.badge-warning { border-color: var(--warn-line); background: var(--warn-soft); color: var(--warn-text); }
-.badge-dark { border-color: rgba(255, 255, 255, .1); background: rgba(255, 255, 255, .1); color: #e2e8f0; }
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 42px; padding: 0 24px; border-radius: 999px; font: 500 14.5px/1 var(--font-sans); letter-spacing: -.01em; text-decoration: none; border: 1px solid transparent; cursor: pointer; white-space: nowrap; transition: background-color .2s, border-color .2s, color .2s, transform .2s var(--ease), opacity .2s; }
+.btn-sm { height: 40px; padding: 0 20px; }
+.btn-gold { background: var(--gold); color: var(--on-gold); box-shadow: 0 8px 20px -10px rgba(212, 161, 47, .8); }
+.btn-gold:hover { background: var(--gold-hover); }
+.btn-ink { background: var(--ink); color: var(--bg); }
+.btn-ink:hover { opacity: .86; }
+.btn-line { background: var(--bg); color: var(--ink); border-color: var(--line); }
+.btn-line:hover { border-color: var(--line-2); background: var(--bg-2); }
+.btn-white { background: #ffffff; color: #121212; }
+.btn-white:hover { background: #f4f4f1; }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn .arrow { transition: transform .2s var(--ease); }
+.btn:hover .arrow { transform: translateX(3px); }
 
-/* header */
-.site-header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface); border-bottom: 1px solid var(--line); }
-.site-header .wrap { display: flex; align-items: center; gap: 12px; height: 56px; }
-.logo { display: flex; align-items: center; min-width: 0; flex-shrink: 1; }
-.logo img { height: 36px; width: auto; }
-.nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
-.nav .link { font-size: 13px; color: var(--faint); padding: 6px 10px; border-radius: 4px; text-decoration: none; }
-.nav .link:hover { color: var(--fg); background: var(--line-faint); }
-.nav .btn { margin-left: 4px; }
-@media (min-width: 640px) { .logo img { height: 44px; } }
-@media (max-width: 900px) { .nav .link, .hide-sm { display: none; } }
+/* nav */
+.nav-wrap { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; padding: 16px var(--gr) 0 var(--gl); }
+.nav { max-width: var(--maxw); margin-inline: auto; display: flex; align-items: center; gap: 8px; height: 62px; padding: 0 10px 0 22px; border: 1px solid var(--line); border-radius: 999px; background: var(--nav-bg); -webkit-backdrop-filter: saturate(150%) blur(14px); backdrop-filter: saturate(150%) blur(14px); box-shadow: var(--shadow); }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; font-size: 19px; letter-spacing: -.03em; }
+.brand img { width: 30px; height: 30px; border-radius: 8px; background: #fff; padding: 1px; }
+.brand .accent { color: var(--gold-text); }
+.links { display: flex; gap: 2px; margin-left: 28px; }
+.links a { font-size: 15px; color: var(--ink-2); text-decoration: none; padding: 8px 13px; border-radius: 999px; transition: color .15s, background-color .15s; }
+.links a:hover { color: var(--ink); background: var(--bg-3); }
+.nav-end { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.text-link { font-size: 15px; color: var(--ink-2); text-decoration: none; padding: 8px 12px; }
+.text-link:hover { color: var(--ink); }
+.theme-btn { position: relative; isolation: isolate; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); color: var(--ink-2); cursor: pointer; transition: border-color .2s, color .2s; }
+.theme-btn:hover { color: var(--gold-ink); border-color: var(--gold-line); }
+.theme-btn .ic { position: absolute; inset: 0; margin: auto; width: 17px; height: 17px; transition: transform .5s cubic-bezier(.65, 0, .35, 1), opacity .3s ease; }
+.theme-btn .sun { transform: rotate(0) scale(1); opacity: 1; }
+.theme-btn .moon { transform: rotate(-90deg) scale(.4); opacity: 0; }
+:root.dark .theme-btn .sun { transform: rotate(90deg) scale(.4); opacity: 0; }
+:root.dark .theme-btn .moon { transform: rotate(0) scale(1); opacity: 1; }
+.theme-btn::after { content: ""; position: absolute; inset: -1px; border-radius: 50%; border: 1.5px solid var(--gold); opacity: 0; pointer-events: none; }
+.theme-btn[data-pulse="1"]::after { animation: ring-out .6s cubic-bezier(.2, .7, .2, 1); }
+@keyframes ring-out { from { transform: scale(.7); opacity: .8; } to { transform: scale(2.2); opacity: 0; } }
+/* radial theme reveal: the new theme grows as a circle from the toggle (clip-path started from JS) */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-new(root) { z-index: 2; }
+::view-transition-old(root) { z-index: 1; }
+@media (max-width: 980px) { .links, .hide-sm { display: none !important; } .nav { padding-left: 16px; } }
+
+/* hero grid: Magic UI's Animated Grid Pattern and Interactive Grid Pattern (MIT), ported to plain JS */
+.hero-shell { position: relative; isolation: isolate; margin-top: -78px; padding-top: 78px; }
+.grid-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;
+  -webkit-mask-image: radial-gradient(ellipse 62% 72% at 50% 38%, #000 22%, transparent 78%); mask-image: radial-gradient(ellipse 62% 72% at 50% 38%, #000 22%, transparent 78%); }
+.grid-bg .gl { stroke: var(--grid-line); }
+.grid-bg .sq { fill: var(--grid-sq); opacity: 0; }
+.motion-ok .grid-bg .sq { animation: sq var(--dur, 4s) ease-in-out var(--delay, 0s) infinite; }
+@keyframes sq { 0%, 100% { opacity: 0; } 50% { opacity: var(--grid-sq-max); } }
+.grid-bg .hov { fill: var(--grid-hover); opacity: 0; transition: opacity .25s ease, x .12s ease, y .12s ease; }
+.grid-bg .hov.on { opacity: 1; }
+:root:not(.motion-ok) .grid-bg .sq { opacity: calc(var(--grid-sq-max) * .5); }
 
 /* hero */
-.hero { border-bottom: 1px solid var(--line); background-image: linear-gradient(to right, rgba(148, 163, 184, .1) 1px, transparent 1px), linear-gradient(to bottom, rgba(148, 163, 184, .1) 1px, transparent 1px); background-size: 24px 24px; }
-.hero .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: center; padding-block: 56px 64px; }
-.badges { display: flex; flex-wrap: wrap; gap: 6px; }
-h1 { font-size: clamp(34px, 4.6vw, 56px); line-height: 1.05; letter-spacing: -.02em; font-weight: 700; margin: 16px 0 18px; }
-.grad { background: linear-gradient(90deg, #1f5ea8 0%, #2a78d6 40%, #eb6834 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.lead { font-size: 17px; line-height: 1.6; color: var(--muted); max-width: 56ch; margin: 0 0 24px; }
-.cta-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.fine { font-size: 12.5px; color: var(--fainter); margin: 12px 0 0; }
-.facts { list-style: none; margin: 28px 0 0; padding: 20px 0 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 20px; }
-.facts li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--fg-2); line-height: 1.45; }
-.facts .ic { color: var(--primary); margin-top: 2px; }
-.facts .mono { font-size: 12.5px; }
-@media (max-width: 960px) { .hero .wrap { grid-template-columns: 1fr; gap: 32px; padding-block: 36px 44px; } }
-@media (max-width: 480px) { .facts { grid-template-columns: 1fr; } }
+.hero { text-align: center; padding-block: 104px 16px; display: flex; flex-direction: column; align-items: center; }
+h1 { font-size: clamp(38px, 5.4vw, 60px); line-height: 1.05; letter-spacing: -.045em; margin: 26px 0 22px; }
+h1 .line { display: block; }
+.js-motion h1 .w { display: inline-block; opacity: 0; transform: translateY(.3em); filter: blur(6px); animation: rise .8s var(--ease) forwards; animation-delay: calc(var(--i) * 55ms + 100ms); }
+@keyframes rise { to { opacity: 1; transform: none; filter: none; } }
+.lead { font-size: clamp(16.5px, 1.5vw, 17.5px); line-height: 1.65; color: var(--muted); max-width: 62ch; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 34px; }
+.scroll-cue { margin-top: 52px; display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 10.5px; letter-spacing: .2em; color: var(--muted); text-decoration: none; }
+.scroll-cue i { width: 1px; height: 44px; background: linear-gradient(var(--gold), transparent); transform-origin: top; animation: cue 2.2s var(--ease) infinite; }
+@keyframes cue { 0% { transform: scaleY(0); } 50% { transform: scaleY(1); } 100% { transform: scaleY(1); opacity: 0; } }
+.js-motion .fade { opacity: 0; animation: fade .9s var(--ease) forwards; animation-delay: var(--d, .5s); }
+@keyframes fade { to { opacity: 1; } }
 
-/* live demo card */
-.demo { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; box-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 16px 40px -16px rgba(15, 23, 42, .22); min-width: 0; }
-.demo-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
-.demo-title { font-size: 14px; font-weight: 600; }
-.demo-note { margin-left: auto; font-size: 11.5px; color: var(--fainter); }
-.live { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 0 rgba(16, 185, 129, .45); animation: pulse 2s infinite; }
-@keyframes pulse { 70% { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
-.demo-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 12px; }
-#slab, #profile { display: block; width: 100%; height: auto; }
-.demo-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 12px; align-items: stretch; }
-.readouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.stat { border: 1px solid var(--line-soft); background: var(--surface-2); border-radius: 4px; padding: 6px 10px; min-width: 0; }
-.stat.accent { border-color: rgba(31, 94, 168, .4); background: var(--primary-soft); }
-.stat-l { font-size: 11.5px; color: var(--faint); }
-.stat-v { font-family: var(--font-mono); font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--fg); white-space: nowrap; }
-.stat.accent .stat-v { color: var(--primary); }
-.stat-s { font-size: 10.5px; color: var(--faint); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stencil { font-size: 12px; line-height: 1.7; color: var(--fg-2); background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 4px; padding: 6px 10px; }
-.stencil b { color: var(--primary); font-weight: 600; }
-.demo-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.scrub { flex: 1 1 140px; display: flex; align-items: center; min-width: 120px; }
-.scrub input { width: 100%; accent-color: var(--primary); margin: 0; }
-@media (max-width: 560px) { .demo-grid { grid-template-columns: 1fr; } }
+/* frames */
+.frame { border: 1px solid var(--line); border-radius: 30px; background: linear-gradient(var(--frame-top), var(--frame-bot)); padding: 28px; min-width: 0; }
+.window, .card-ui { background: var(--bg); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: var(--lift); }
+.win-bar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--bg-2); flex-wrap: wrap; }
+.dots { display: flex; gap: 6px; } .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line-2); }
+.url { font-size: 12.5px; color: var(--muted); }
+.tabs { display: flex; gap: 2px; margin-left: auto; padding: 3px; border-radius: 999px; background: var(--bg-3); }
+.tab { border: 0; background: transparent; color: var(--muted); font: 500 12.5px/1 var(--font-sans); padding: 8px 12px; border-radius: 999px; cursor: pointer; transition: color .15s, background-color .15s, box-shadow .15s; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { background: var(--bg); color: var(--ink); box-shadow: 0 1px 3px rgba(18, 18, 18, .14); }
+.shots { position: relative; aspect-ratio: 16 / 10; background: var(--bg-2); }
+.shot { position: absolute; inset: 0; transition: opacity .5s var(--ease), transform .7s var(--ease); }
+.shot[aria-hidden="true"] { opacity: 0; transform: scale(1.012); pointer-events: none; }
+.shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.shot .shot-dark { display: none; }
+:root.dark .shot .shot-light { display: none; }
+:root.dark .shot .shot-dark { display: block; }
+.showcase { --tilt: 0deg; perspective: 2000px; }
+.showcase .frame { transform: rotateX(var(--tilt)); transform-origin: 50% 0; will-change: transform; }
+.cap { display: flex; flex-wrap: wrap; gap: 6px 20px; justify-content: center; margin-top: 18px; font-size: 13.5px; color: var(--muted); }
+.cap b { font-weight: 500; color: var(--ink); font-family: var(--font-mono); }
+.chip { font: 500 10.5px/1 var(--font-sans); letter-spacing: .1em; text-transform: uppercase; padding: 6px 8px; border-radius: 5px; background: var(--gold-soft); color: var(--gold-ink); }
+
+/* numbers */
+.strip-label { display: flex; align-items: center; gap: 14px; justify-content: center; margin: 72px 0 22px; font-size: 10.5px; letter-spacing: .3em; color: var(--gold-ink); text-transform: uppercase; }
+.strip-label::before, .strip-label::after { content: ""; width: 48px; height: 1px; background: var(--line-2); }
+.nums { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.num { border: 1px solid var(--line); border-radius: 16px; padding: 20px 18px; background: var(--bg); text-align: center; }
+.num-v { font: 500 30px/1.1 var(--font-sans); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.num-l { margin-top: 6px; font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+@media (max-width: 900px) { .nums { grid-template-columns: repeat(2, minmax(0, 1fr)); } .num:last-child { grid-column: 1 / -1; } }
 
 /* sections */
-.section { padding-block: 64px; }
-.section-alt { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.section-head { max-width: 68ch; margin-bottom: 28px; }
-.eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--primary); }
-.section h2 { font-size: clamp(26px, 3vw, 36px); letter-spacing: -.015em; line-height: 1.15; margin: 8px 0 10px; font-weight: 700; }
-.section-head p { margin: 0; color: var(--muted); font-size: 15.5px; }
-.aside-note { margin: 22px 0 0; font-size: 13px; color: var(--faint); }
-.aside-note a { color: var(--primary); text-decoration: none; }
-.aside-note a:hover { text-decoration: underline; }
-@media (max-width: 640px) { .section { padding-block: 44px; } }
+.sec { padding-block: 120px; }
+.sec-tight { padding-top: 40px; }
+.split { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 64px; align-items: start; }
+/* the demo frame stays in view while the longer text column scrolls past it */
+@media (min-width: 981px) { .split > .frame { position: sticky; top: 104px; } .split > div:not(.frame) { padding-top: 12px; } }
+.split.rev > :first-child { order: 2; }
+h2 { font-size: clamp(30px, 3.6vw, 44px); line-height: 1.08; letter-spacing: -.04em; margin: 18px 0; }
+.sub { font-size: 17px; line-height: 1.65; color: var(--muted); max-width: 56ch; }
+.sub + .sub { margin-top: 14px; }
+.grid4 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; margin-top: 30px; background: var(--bg); }
+.grid4 > div { padding: 20px 22px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.grid4 > div:nth-child(2n) { border-right: 0; }
+.grid4 > div:nth-last-child(-n+2) { border-bottom: 0; }
+.grid4 h3 { font-size: 15.5px; letter-spacing: -.01em; }
+.grid4 p { font-size: 13.5px; color: var(--muted); margin-top: 8px; line-height: 1.55; }
+.center-head { text-align: center; max-width: 760px; margin: 0 auto 56px; }
+.center-head .sub { margin-inline: auto; }
+@media (max-width: 980px) { .split { grid-template-columns: 1fr; gap: 40px; } .split.rev > :first-child { order: 0; } }
+@media (max-width: 560px) { .grid4 { grid-template-columns: 1fr; } .grid4 > div { border-right: 0; } .grid4 > div:nth-last-child(2) { border-bottom: 1px solid var(--line); } .sec { padding-block: 80px; } .frame { padding: 14px; border-radius: 22px; } }
 
-/* workflow phases */
-.phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-.phase { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.phase-head { display: flex; align-items: center; gap: 10px; }
-.phase-num { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; flex-shrink: 0; }
-.phase-label { font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text); }
-.phase-title { font-size: 15px; font-weight: 600; color: var(--fg); line-height: 1.2; }
-.phase-desc { margin: 0; font-size: 13px; color: var(--muted); }
-.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
-.steps li { display: flex; gap: 10px; align-items: flex-start; padding: 6px 8px; border-radius: 6px; }
-.steps li:hover { background: var(--soft); }
-.roman { display: grid; place-items: center; min-width: 28px; height: 20px; padding: 0 4px; border-radius: 4px; background: var(--soft); color: var(--text); box-shadow: inset 0 0 0 1px var(--ring); font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; margin-top: 1px; flex-shrink: 0; }
-.steps .t { font-size: 13.5px; color: var(--fg); line-height: 1.35; min-width: 0; }
-.steps small { display: block; font-size: 12px; color: var(--faint); margin-top: 1px; }
-@media (max-width: 860px) { .phases { grid-template-columns: 1fr; } }
+.js-motion .rv { opacity: 0; transform: translateY(18px); transition: opacity .8s var(--ease), transform .8s var(--ease); transition-delay: var(--d, 0s); }
+.js-motion .rv.in { opacity: 1; transform: none; }
 
-/* method: derivation + elimination walkthrough */
-.method-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 32px; align-items: start; }
-.eq { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-top: 1px solid var(--line-soft); align-items: center; }
-.eq:last-child { border-bottom: 1px solid var(--line-soft); }
-.eq-l { font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--faint); line-height: 1.3; }
-.eq-m { min-width: 0; overflow-x: auto; font-size: 14px; }
-.eq-m .katex-display { margin: 0 !important; text-align: left; padding: 2px 0; }
-.eq-m .katex-display > .katex { text-align: left; }
-.tex { font-family: var(--font-mono); font-size: 13px; }
-.derivation-note { font-size: 13px; color: var(--faint); margin: 14px 0 0; }
-.algo { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
-.algo-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line-faint); }
-.step-badge { border-radius: 6px; background: #0f172a; color: #fff; padding: 2px 8px; font: 600 12px/1.6 var(--font-mono); }
-.step-badge.back { background: #059669; }
-.algo-title { font-size: 13px; color: var(--fg-2); }
-.algo-body { display: grid; grid-template-columns: minmax(0, 230px) minmax(0, 1fr); gap: 16px; padding: 14px; }
-.ops-l { font-size: 12px; font-weight: 500; color: var(--faint); margin-bottom: 4px; }
-.ops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
-.ops .tex { font-size: 14px; }
-.ops-f { font-size: 11px; color: var(--faint); margin-top: 2px; }
-.ops-none { margin: 0; font-size: 13px; color: var(--faint); }
-.rows-how { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; color: var(--fg-2); }
-.rows-how b { display: block; font-weight: 600; color: var(--fg); }
-.solution { margin-top: 12px; border-top: 1px solid var(--line-soft); padding-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+/* walkthrough */
+.ui-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.step-badge { font: 500 11.5px/1 var(--font-mono); padding: 6px 10px; border-radius: 999px; background: var(--ink); color: var(--bg); }
+.step-badge.back { background: var(--gold); color: var(--on-gold); }
+.ui-title { font-size: 14px; color: var(--ink-2); }
+.algo-body { display: grid; grid-template-columns: minmax(0, 210px) minmax(0, 1fr); gap: 18px; padding: 18px; min-height: 280px; }
+.ops-l { font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.ops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.ops b { display: block; font-weight: 500; color: var(--ink); font-size: 12.5px; }
+.ops-f { font: 400 11px/1.4 var(--font-mono); color: var(--muted); margin-top: 2px; }
+.ops-note { margin-top: 12px; font-size: 12.5px; color: var(--muted); }
 .mx-wrap { overflow-x: auto; min-width: 0; }
-.mx { margin-inline: auto; border-collapse: separate; border-spacing: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 12.5px; }
-.mx th { font-family: var(--font-sans); font-size: 10px; font-weight: 500; color: var(--fainter); padding: 0 6px 4px; text-align: center; }
-.mx .rl { font-family: var(--font-sans); font-size: 10px; color: var(--fainter); padding-right: 8px; text-align: right; }
+.mx { margin-inline: auto; border-collapse: separate; border-spacing: 0; font: 400 12.5px/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+.mx th { font: 500 10px/1 var(--font-sans); color: var(--faint); padding: 0 6px 6px; }
+.mx .rl { font: 500 10px/1 var(--font-sans); color: var(--faint); padding-right: 8px; text-align: right; }
 .mx .bk { width: 7px; padding: 0; }
-.mx .bl { border-left: 1.5px solid #334155; }
-.mx .br { border-right: 1.5px solid #334155; }
-.mx .bk.t { border-top: 1.5px solid #334155; }
-.mx .bk.b { border-bottom: 1.5px solid #334155; }
-.mx .sep { width: 0; padding: 0; border-left: 1px dashed var(--line); }
-.mx .c { padding: 4px 9px; text-align: right; white-space: nowrap; }
-.mx .z { color: var(--line); }
-.mx .prow .c { background: var(--surface-2); }
-.mx .chg .c { background: var(--warn-soft); }
-.mx .piv { background: var(--primary-soft); box-shadow: inset 0 0 0 1.5px var(--primary); border-radius: 3px; color: var(--primary); font-weight: 600; }
-.mx-cap { text-align: center; font-size: 11px; color: var(--fainter); margin-top: 6px; }
-.algo-foot { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line-faint); }
-.algo-dots { display: flex; gap: 5px; margin-left: auto; }
-.algo-dots button { width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0; background: var(--line); cursor: pointer; }
-.algo-dots button[aria-current="step"] { background: var(--primary); }
-.algo-count { font-size: 12px; color: var(--faint); margin-right: auto; }
-@media (max-width: 1000px) { .method-grid { grid-template-columns: 1fr; } }
-@media (max-width: 720px) { .algo-body { grid-template-columns: 1fr; } .eq { grid-template-columns: 1fr; gap: 4px; } }
+.mx .bl { border-left: 1.5px solid var(--ink-2); } .mx .br { border-right: 1.5px solid var(--ink-2); }
+.mx .bk.t { border-top: 1.5px solid var(--ink-2); } .mx .bk.b { border-bottom: 1.5px solid var(--ink-2); }
+.mx .sep { width: 0; padding: 0; border-left: 1px dashed var(--line-2); }
+.mx .c { padding: 6px 9px; text-align: right; white-space: nowrap; }
+.mx .z { color: var(--line-2); }
+.mx .prow .c { background: var(--bg-2); }
+.mx .chg .c { background: var(--gold-soft); }
+.motion-ok .mx .chg .c { animation: ink 1s var(--ease); }
+@keyframes ink { from { background: var(--gold-line); } to { background: var(--gold-soft); } }
+.mx .piv { background: var(--gold-soft) !important; box-shadow: inset 0 0 0 1.5px var(--gold); border-radius: 4px; color: var(--gold-ink); font-weight: 500; }
+.mx-cap { text-align: center; font-size: 11.5px; color: var(--faint); margin-top: 8px; }
+.sol { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
+.pbadge { font: 500 11.5px/1 var(--font-mono); padding: 5px 9px; border-radius: 999px; border: 1px solid var(--ok-line); background: var(--ok-soft); color: var(--ok); }
+.ui-foot { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--line); }
+.ui-foot .btn { height: 36px; padding: 0 14px; font-size: 13.5px; }
+.prog { flex: 1; height: 4px; border-radius: 4px; background: var(--bg-3); overflow: hidden; }
+.prog i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .4s var(--ease); }
+.count { font: 500 12px/1 var(--font-mono); color: var(--muted); min-width: 74px; text-align: center; }
+@media (max-width: 720px) { .algo-body { grid-template-columns: 1fr; } }
 
-/* features */
-.feats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.feat { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 10px; transition: border-color .15s; min-width: 0; }
-.feat:hover { border-color: var(--line); }
-.feat .ico { width: 32px; height: 32px; border-radius: 6px; background: var(--primary-soft); color: var(--primary); display: grid; place-items: center; }
-.feat .ico .ic { width: 17px; height: 17px; }
-.feat h3 { margin: 0; font-size: 14.5px; font-weight: 600; }
-.feat p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
-@media (max-width: 1060px) { .feats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .feats { grid-template-columns: 1fr; } }
+/* live slab */
+.live { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 0 rgba(16, 185, 129, .5); animation: pulse 2s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+.ui-head .note { margin-left: auto; font-size: 12px; color: var(--muted); }
+.demo-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+#slab, #profile { display: block; width: 100%; height: auto; }
+.s-ink { fill: var(--ink); } .s-ink2 { fill: var(--ink-2); } .s-muted { fill: var(--muted); } .s-line { stroke: var(--muted); } .s-grid { stroke: var(--chart-grid); } .s-bg { fill: var(--bg); } .s-edge { stroke: var(--ink-2); } .s-hatch { stroke: var(--line-2); } .s-gold { stroke: var(--gold); } .s-node { stroke: var(--node-stroke); }
+.demo-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.2fr); gap: 14px; }
+.reads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-content: start; }
+.read { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; min-width: 0; }
+.read .k { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.read-v { font: 500 15px/1.3 var(--font-mono); font-variant-numeric: tabular-nums; margin-top: 3px; white-space: nowrap; }
+.read-s { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.read.hot { border-color: var(--gold-line); background: var(--gold-soft); }
+.read.hot .read-v { color: var(--gold-ink); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.controls .btn { height: 36px; padding: 0 14px; font-size: 13.5px; }
+.scrub { flex: 1 1 160px; display: flex; }
+.scrub input { width: 100%; accent-color: var(--gold); }
+@media (max-width: 560px) { .demo-grid { grid-template-columns: 1fr; } }
 
-/* validation */
-.cmp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.cmp { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 6px; min-width: 0; display: flex; flex-direction: column; }
-.cmp-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
-.cmp-head h3 { margin: 0; font-size: 14px; font-weight: 600; }
-.cmp-head .sub { width: 100%; font-size: 12.5px; color: var(--faint); }
-.cmp-table { overflow-x: auto; padding: 8px 14px 4px; }
-.cmp table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.cmp th { font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--fainter); text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
-.cmp th:first-child, .cmp td:first-child { text-align: left; padding-left: 0; }
-.cmp td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--line-faint); white-space: nowrap; }
-.cmp tr:last-child td { border-bottom: 0; }
-.cmp td.ok { color: var(--ok-text); }
-.cmp td.bad { color: var(--warn-text); background: var(--warn-soft); }
-.cmp td.lbl { font-family: var(--font-sans); color: var(--muted); }
-.cmp p { margin: 0; padding: 10px 14px 14px; font-size: 13px; color: var(--muted); line-height: 1.5; }
-.cmp .tex { font-size: 12.5px; }
-@media (max-width: 860px) { .cmp-grid { grid-template-columns: 1fr; } }
+/* expression demo */
+.expr-prev { min-height: 96px; display: flex; align-items: center; justify-content: center; padding: 18px; border-bottom: 1px solid var(--line); background: var(--bg-2); font-size: 18px; overflow-x: auto; }
+.expr-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.expr-body label { font-size: 12.5px; font-weight: 500; color: var(--ink-2); display: flex; justify-content: space-between; gap: 8px; }
+.expr-body label span { font-weight: 400; color: var(--faint); }
+.expr-body input { width: 100%; height: 44px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--bg); color: var(--ink); font: 400 14px/1 var(--font-mono); padding: 0 14px; outline: none; transition: border-color .15s, box-shadow .15s; }
+.expr-body input:focus { border-color: var(--gold); box-shadow: 0 0 0 4px var(--gold-soft); }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.preset { border: 1px solid var(--line); background: var(--bg); color: var(--ink-2); font: 500 12px/1 var(--font-sans); padding: 8px 12px; border-radius: 999px; cursor: pointer; transition: border-color .15s, background-color .15s, color .15s; }
+.preset:hover { border-color: var(--line-2); }
+.preset[aria-pressed="true"] { border-color: var(--gold); background: var(--gold-soft); color: var(--gold-ink); }
+.expr-status { font-size: 12px; color: var(--muted); min-height: 18px; }
+.expr-status.bad { color: var(--bad); }
+
+/* workflow */
+.phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.phase { border: 1px solid var(--line); border-radius: 20px; padding: 24px; background: var(--bg); transition: border-color .25s, transform .25s var(--ease), box-shadow .25s; }
+.phase:hover { border-color: var(--gold-line); transform: translateY(-3px); box-shadow: var(--lift); }
+.phase-n { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--gold-soft); color: var(--gold-ink); font: 500 13px/1 var(--font-mono); border: 1px solid var(--gold-line); }
+.phase .eyebrow { margin-top: 18px; font-size: 10.5px; }
+.phase h3 { font-size: 21px; letter-spacing: -.025em; margin: 10px 0 6px; }
+.phase > p { color: var(--muted); font-size: 14px; }
+.steps { list-style: none; margin: 18px 0 0; padding: 14px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.steps li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; font-size: 14px; }
+.steps .r { font: 500 10.5px/20px var(--font-mono); text-align: center; height: 20px; border-radius: 5px; background: var(--bg-3); color: var(--ink-2); }
+.steps small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.45; margin-top: 2px; }
+@media (max-width: 900px) { .phases { grid-template-columns: 1fr; } }
+
+/* validation table */
+.vt { border: 1px solid var(--line); border-radius: 20px; overflow: hidden; background: var(--bg); }
+.vt-scroll { overflow-x: auto; }
+.vt table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }
+.vt th { text-align: left; font-size: 10.5px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 14px 20px; background: var(--bg-2); border-bottom: 1px solid var(--line); }
+.vt td { padding: 16px 20px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.vt tr:last-child td { border-bottom: 0; }
+.vt td small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.vt .err { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vt .err b { font-weight: 500; color: var(--ok); }
+.vt-note { margin-top: 16px; text-align: center; font-size: 13px; color: var(--muted); }
+@media (max-width: 680px) {
+  .vt table { min-width: 0; }
+  .vt thead { display: none; }
+  .vt tr { display: grid; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+  .vt tr:last-child { border-bottom: 0; }
+  .vt td { display: block; padding: 0; border: 0; }
+  .vt td::before { content: attr(data-label); display: block; font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin-bottom: 2px; }
+  .vt td:first-child::before { display: none; }
+  .vt td:first-child { font-weight: 500; }
+}
+
+/* dark band */
+.band { position: relative; isolation: isolate; overflow: hidden; border-radius: 28px; background: var(--band); color: var(--band-ink); padding: 52px 44px; display: flex; flex-wrap: wrap; gap: 28px; align-items: center; justify-content: space-between; }
+.band canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; opacity: .55; -webkit-mask-image: linear-gradient(90deg, #000 0%, transparent 72%); mask-image: linear-gradient(90deg, #000 0%, transparent 72%); }
+.band h2 { font-size: clamp(24px, 2.6vw, 30px); letter-spacing: -.03em; margin: 0; max-width: 26ch; }
+.band h2 span { color: var(--band-gold); }
+.band p { color: var(--band-muted); margin-top: 14px; max-width: 58ch; font-size: 15px; }
 
 /* api */
-.api { background: var(--navy-950); color: #e2e8f0; border-top: 1px solid var(--navy-700); border-bottom: 1px solid var(--navy-700); }
-.api .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 40px; padding-block: 64px; }
-.api .eyebrow { color: #86b6ef; }
-.api h2 { color: #fff; }
-.api .section-head p { color: #94a3b8; }
-.endpoints { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--navy-700); }
-.endpoints li { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--navy-700); align-items: baseline; }
-.method { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: .04em; }
-.m-get { color: #6ee7b7; }
-.m-post { color: #93c5fd; }
-.endpoints .path { font-family: var(--font-mono); font-size: 13px; color: #f1f5f9; word-break: break-all; }
-.endpoints .why { display: block; font-size: 12px; color: #94a3b8; margin-top: 1px; }
-.code-card { min-width: 0; }
-.code-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 11.5px; color: #94a3b8; margin-bottom: 8px; }
-.code-head .mono { color: #cbd5e1; }
-.code { background: var(--navy-900); border: 1px solid var(--navy-700); border-radius: 6px; padding: 14px 16px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; color: #cbd5e1; overflow-x: auto; margin: 0; }
-.code .k { color: #9ec5f5; }
-.code .s { color: #c6e6d3; }
-.code .n { color: #f6b48a; }
-.code .cm { color: #64748b; }
-.chips-l { font-size: 11.5px; color: #94a3b8; margin: 14px 0 6px; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chips .badge-dark { font-family: var(--font-mono); font-weight: 500; }
-@media (max-width: 900px) { .api .wrap { grid-template-columns: 1fr; gap: 28px; } }
+.code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; min-width: 0; }
+.code-bar { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; border-bottom: 1px solid var(--line); }
+.code-bar .tabs { margin-left: 0; }
+.copy { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink-2); font: 500 12.5px/1 var(--font-sans); padding: 8px 12px; border-radius: 999px; cursor: pointer; }
+.copy:hover { color: var(--ink); border-color: var(--line-2); }
+.code pre { margin: 0; padding: 18px; font: 400 13px/1.7 var(--font-mono); color: var(--ink-2); overflow-x: auto; min-height: 290px; }
+.code .k { color: var(--k); } .code .s { color: var(--s); } .code .n { color: var(--n); } .code .cm { color: var(--cm); }
+.code-foot { padding: 12px 18px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+.eps { list-style: none; padding: 0; margin: 28px 0 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.eps li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--line); align-items: baseline; background: var(--bg); }
+.eps li:last-child { border-bottom: 0; }
+.m { font: 500 11px/1 var(--font-mono); letter-spacing: .05em; }
+.m.get { color: var(--ok); } .m.post { color: var(--gold-ink); }
+.eps .p { font: 400 13.5px/1.3 var(--font-mono); color: var(--ink); word-break: break-all; }
+.eps .why { display: block; font-size: 13px; color: var(--muted); margin-top: 3px; }
 
-/* stack + cta */
-.stack-rows { display: flex; flex-direction: column; gap: 10px; }
-.stack-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
-.stack-row .lbl { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); min-width: 92px; }
-.chip { display: inline-flex; align-items: center; border: 1px solid var(--line-soft); background: var(--surface); border-radius: 4px; padding: 3px 8px; font-size: 12.5px; font-family: var(--font-mono); color: var(--fg-2); }
-.cta { margin-top: 40px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 30px 28px 28px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; position: relative; overflow: hidden; }
-.cta::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, #1f5ea8, #2a78d6 40%, #eb6834); }
-.cta h2 { margin: 0 0 6px; font-size: 24px; letter-spacing: -.01em; font-weight: 700; }
-.cta p { margin: 0; color: var(--muted); font-size: 14px; max-width: 52ch; }
-.cta .cta-row { flex-shrink: 0; }
+/* faq */
+.faq { max-width: 840px; margin-inline: auto; border-top: 1px solid var(--line); }
+.faq details { border-bottom: 1px solid var(--line); }
+.faq summary { list-style: none; cursor: pointer; padding: 24px 4px; display: flex; justify-content: space-between; gap: 16px; align-items: center; font-size: 17.5px; font-weight: 500; letter-spacing: -.015em; }
+.faq summary::-webkit-details-marker { display: none; }
+.pm { width: 28px; height: 28px; flex-shrink: 0; position: relative; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); transition: border-color .2s, background-color .2s; }
+.pm::before, .pm::after { content: ""; position: absolute; left: 8px; right: 8px; top: 13px; height: 1.5px; background: currentColor; border-radius: 2px; transition: transform .3s var(--ease); }
+.pm::after { transform: rotate(90deg); }
+.faq details[open] .pm { border-color: var(--gold-line); background: var(--gold-soft); color: var(--gold-ink); }
+.faq details[open] .pm::after { transform: rotate(0); }
+.faq .a { padding: 0 4px 24px; color: var(--muted); max-width: 70ch; font-size: 15.5px; }
+.faq .a code { font-family: var(--font-mono); font-size: 13.5px; color: var(--ink); }
+.faq details[open] .a { animation: fade .4s var(--ease); }
 
 /* footer */
-.footer { border-top: 1px solid var(--line); padding-block: 28px 36px; font-size: 12.5px; color: var(--faint); }
-.footer .wrap { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: flex-end; justify-content: space-between; }
-.footer-links { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 0; padding: 0; list-style: none; }
-.footer a { color: var(--primary); text-decoration: none; }
-.footer a:hover { text-decoration: underline; }
-.sig { display: flex; justify-content: flex-end; user-select: none; }
-.sig svg { height: 48px; width: 124px; }
-.sig text { animation: ink 2.4s ease-in-out .4s both; }
-@keyframes ink { from { stroke-dashoffset: 520; fill-opacity: 0; } 70% { stroke-dashoffset: 0; fill-opacity: 0; } to { stroke-dashoffset: 0; fill-opacity: 1; } }
+.foot { background: var(--bg-2); border-top: 1px solid var(--line); margin-top: 120px; padding-block: 64px 40px; }
+.foot-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)); gap: 32px; }
+.foot h4 { margin: 0 0 14px; font-size: 11px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.foot ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.foot a { color: var(--ink-2); text-decoration: none; font-size: 14.5px; }
+.foot a:hover { color: var(--ink); }
+.blurb { color: var(--muted); font-size: 14.5px; margin-top: 14px; max-width: 38ch; }
+.foot-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.sig svg { height: 50px; width: 128px; display: block; }
+.sig text { fill: var(--ink-2); stroke: var(--ink-2); stroke-dasharray: 520; }
+.js-motion .sig.in text { animation: sign 2.4s ease-in-out .2s both; }
+@keyframes sign { from { stroke-dashoffset: 520; fill-opacity: 0; } 70% { stroke-dashoffset: 0; fill-opacity: 0; } to { stroke-dashoffset: 0; fill-opacity: 1; } }
+@media (max-width: 760px) { .foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .foot-grid > :first-child { grid-column: 1 / -1; } .band { padding: 36px 26px; } }
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .sig text, .live { animation: none; }
-  .btn, .feat { transition: none; }
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
 </style>
 </head>
@@ -285,314 +382,353 @@ h1 { font-size: clamp(34px, 4.6vw, 56px); line-height: 1.05; letter-spacing: -.0
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
-    <symbol id="i-github" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></symbol>
-    <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
-    <symbol id="i-pause" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></symbol>
-    <symbol id="i-step" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></symbol>
+    <symbol id="i-step" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5l9 7-9 7z"/><path d="M18 5v14"/></symbol>
     <symbol id="i-reset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
     <symbol id="i-prev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
     <symbol id="i-next" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
-    <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12h11"/><path d="M10 18h11"/><path d="M10 6h11"/><path d="M4 10h2"/><path d="M4 6h1v4"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></symbol>
-    <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></symbol>
-    <symbol id="i-ruler" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></symbol>
-    <symbol id="i-playc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></symbol>
-    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
-    <symbol id="i-flask" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M6.453 15h11.094"/><path d="M8.5 2h7"/></symbol>
-    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol>
-    <symbol id="i-thermo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
   </defs>
 </svg>
 
-<header class="site-header">
-  <div class="wrap">
-    <a class="logo" href="/" aria-label="ThermoSolve home"><img src="/logo-wide.png" alt="ThermoSolve, 1D heat conduction numerical solver" width="900" height="237" /></a>
-    <nav class="nav" aria-label="Page sections">
-      <a class="link" href="#workflow">Workflow</a>
-      <a class="link" href="#method">Method</a>
-      <a class="link" href="#features">Features</a>
-      <a class="link" href="#validation">Validation</a>
-      <a class="link" href="#api">API</a>
-      <a class="btn btn-secondary btn-sm" href="https://github.com/shivam-anand-03/thermosolver-ui" target="_blank" rel="noopener" aria-label="GitHub"><svg class="ic"><use href="#i-github"/></svg><span class="hide-sm">GitHub</span></a>
-      <a class="btn btn-primary btn-sm" href="/solver/">Open the solver <svg class="ic"><use href="#i-arrow"/></svg></a>
-    </nav>
-  </div>
-</header>
+<div class="nav-wrap">
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="/" aria-label="CFD Solver home"><img src="/favicon.png" alt="" width="30" height="30" /><span>CFD <span class="accent">Solver</span></span></a>
+    <div class="links">
+      <a href="#product">Product</a><a href="#method">How it works</a><a href="#source">Heat sources</a><a href="#workflow">Workflow</a><a href="#api">API</a><a href="#faq">FAQ</a>
+    </div>
+    <div class="nav-end">
+      <a class="text-link hide-sm" href="https://github.com/shivam-anand-03/thermosolver-ui" target="_blank" rel="noopener">GitHub</a>
+      <button class="theme-btn" id="theme" type="button" aria-label="Switch between light and dark theme"><svg class="ic sun"><use href="#i-sun"/></svg><svg class="ic moon"><use href="#i-moon"/></svg></button>
+      <a class="btn btn-ink btn-sm" href="/solver/">Open solver</a>
+    </div>
+  </nav>
+</div>
 
 <main>
-<section class="hero">
-  <div class="wrap">
-    <div class="hero-copy">
-      <div class="badges">
-        <span class="badge">Steady and transient</span>
-        <span class="badge badge-neutral">1-D · 2-D · 3-D</span>
-        <span class="badge badge-neutral">ME46220 workflow</span>
-      </div>
-      <h1>The heat equation, solved with <span class="grad">nothing hidden.</span></h1>
-      <p class="lead">ThermoSolve is an educational finite-difference solver for conduction in a plane slab. Set up the problem in a guided workflow, run the solver, and read every intermediate quantity: the mesh spacing, every matrix row, every row operation and every back-substitution line.</p>
-      <div class="cta-row">
-        <a class="btn btn-primary btn-lg" href="/solver/">Open the solver <svg class="ic"><use href="#i-arrow"/></svg></a>
-        <a class="btn btn-secondary btn-lg" href="#method">Watch the elimination</a>
-      </div>
-      <p class="fine">Free. Runs in the browser against the ThermoSolve API. No account needed.</p>
-      <ul class="facts">
-        <li><svg class="ic"><use href="#i-check"/></svg><span><span class="mono">Δx = L/(N−1)</span> computed as you type, 2 to 2000 nodes</span></li>
-        <li><svg class="ic"><use href="#i-check"/></svg><span>Hand-written Gaussian elimination with partial pivoting</span></li>
-        <li><svg class="ic"><use href="#i-check"/></svg><span>Residual <span class="mono">max|A·T − b|</span> reported with every solve</span></li>
-        <li><svg class="ic"><use href="#i-check"/></svg><span>PDF report with derivation, matrices and charts</span></li>
-      </ul>
-    </div>
+<div class="hero-shell" id="hero-shell">
+<svg class="grid-bg" id="grid-bg" aria-hidden="true">
+  <defs><pattern id="grid-pat" width="44" height="44" patternUnits="userSpaceOnUse" x="-1" y="-1"><path class="gl" d="M.5 44V.5H44" fill="none" /></pattern></defs>
+  <rect width="100%" height="100%" fill="url(#grid-pat)" />
+  <g id="grid-sqs"></g>
+  <rect class="hov" id="grid-hov" width="43" height="43" />
+</svg>
+<section class="wrap hero" id="top">
+  <span class="eyebrow pill fade" style="--d:.05s">CFD Solver · Heat transfer</span>
+  <h1 id="headline"><span class="line">Solving heat transfer by hand?</span><span class="line gold">See every step the solver takes.</span></h1>
+  <p class="lead fade" style="--d:.6s">CFD Solver sets up conduction and convection problems, solves them with hand-written FDM, FVM and FEM solvers, and shows the working: every matrix row, every row operation, every iteration, and the exact solution beside the numerical one.</p>
+  <div class="cta-row fade" style="--d:.75s">
+    <a class="btn btn-gold" href="/solver/">Try it for free <svg class="ic arrow"><use href="#i-arrow"/></svg></a>
+    <a class="btn btn-line" href="#method">See how it works <svg class="ic arrow"><use href="#i-arrow"/></svg></a>
+  </div>
+  <a class="scroll-cue fade" style="--d:1s" href="#product">SCROLL<i></i></a>
+</section>
+</div>
 
-    <div class="demo" id="demo" aria-label="Live transient example">
-      <div class="demo-head">
-        <span class="live" aria-hidden="true"></span>
-        <span class="demo-title">MST-1 transient slab</span>
-        <span class="badge badge-neutral">fully implicit</span>
-        <span class="badge">Fo = 1</span>
-        <span class="demo-note">solved live in your browser</span>
-      </div>
-      <div class="demo-body">
-        <svg id="slab" viewBox="0 0 720 236" role="img" aria-label="Plane slab of 5 mm with 6 nodes, insulated on the left and held at 250 °C on the right"></svg>
-        <div class="demo-grid">
-          <div class="readouts">
-            <div class="stat"><div class="stat-l">Δx</div><div class="stat-v">1 mm</div><div class="stat-s">L/(N−1), L = 5 mm, N = 6</div></div>
-            <div class="stat"><div class="stat-l">Δt</div><div class="stat-v">10.40 s</div><div class="stat-s">Fo·Δx²/α</div></div>
-            <div class="stat accent"><div class="stat-l">Time step</div><div class="stat-v" id="ro-step">1 / 60</div><div class="stat-s">t = <span id="ro-time">10.40</span> s</div></div>
-            <div class="stat"><div class="stat-l">α = k/ρc<sub>p</sub></div><div class="stat-v">9.6154e−8</div><div class="stat-s">m²/s · k = 0.25, ρ = 1300, c<sub>p</sub> = 2000</div></div>
+<section class="wrap" id="product">
+  <div class="showcase rv" id="showcase">
+    <div class="frame">
+      <div class="window">
+        <div class="win-bar">
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="url">cfd-solver / <span id="shot-route">solver / results</span></span>
+          <div class="tabs" role="tablist" aria-label="Screens">
+            <button class="tab" role="tab" id="tab-a" aria-selected="true" aria-controls="shot-a" data-route="solver / results">2-D plate</button>
+            <button class="tab" role="tab" id="tab-b" aria-selected="false" aria-controls="shot-b" data-route="solver / validation">Transient validation</button>
           </div>
-          <svg id="profile" viewBox="0 0 360 176" role="img" aria-label="Temperature profile across the slab at the current time step"></svg>
         </div>
-        <div class="stencil mono">−Fo·T<sub>i−1</sub> + (1+2Fo)·T<sub>i</sub> − Fo·T<sub>i+1</sub> = T<sub>i</sub><sup>n</sup> &nbsp;&nbsp;→&nbsp;&nbsp; row <b>[ −1 &nbsp;3 &nbsp;−1 ]</b> &nbsp;·&nbsp; left T<sub>1</sub> − T<sub>2</sub> = 0 &nbsp;·&nbsp; right T<sub>6</sub> = 250</div>
-        <div class="demo-controls">
-          <button class="btn btn-primary btn-sm" id="demo-play" type="button" aria-pressed="false"><svg class="ic"><use id="demo-play-icon" href="#i-play"/></svg><span id="demo-play-label">Play</span></button>
-          <button class="btn btn-secondary btn-sm" id="demo-next" type="button"><svg class="ic"><use href="#i-step"/></svg>Step</button>
-          <button class="btn btn-secondary btn-sm" id="demo-reset" type="button"><svg class="ic"><use href="#i-reset"/></svg>Restart</button>
-          <label class="scrub"><span class="sr-only">Time step</span><input type="range" id="demo-step" min="0" max="60" value="1" step="1" /></label>
+        <div class="shots">
+          <div class="shot" id="shot-a" role="tabpanel" aria-labelledby="tab-a">
+            <img class="shot-light" src="/screens/results-2d-plate-light-1600.webp" srcset="/screens/results-2d-plate-light-1600.webp 1600w, /screens/results-2d-plate-light-2400.webp 2400w" sizes="(max-width: 1272px) 100vw, 1176px" width="1600" height="1000" alt="Results step for a 2-D plate with a hot top edge: temperature field heat map beside a centre-line profile where the numerical points sit on the exact curve." />
+            <img class="shot-dark" loading="lazy" src="/screens/results-2d-plate-dark-1600.webp" srcset="/screens/results-2d-plate-dark-1600.webp 1600w, /screens/results-2d-plate-dark-2400.webp 2400w" sizes="(max-width: 1272px) 100vw, 1176px" width="1600" height="1000" alt="Results step for a 2-D plate with a hot top edge: temperature field heat map beside a centre-line profile where the numerical points sit on the exact curve." />
+          </div>
+          <div class="shot" id="shot-b" role="tabpanel" aria-labelledby="tab-b" aria-hidden="true">
+            <img class="shot-light" loading="lazy" src="/screens/validation-transient-slab-light-1600.webp" srcset="/screens/validation-transient-slab-light-1600.webp 1600w, /screens/validation-transient-slab-light-2400.webp 2400w" sizes="(max-width: 1272px) 100vw, 1176px" width="1600" height="1000" alt="Validation step for a transient slab: the exact series solution and the error against it node by node, under 0.008 degrees." />
+            <img class="shot-dark" loading="lazy" src="/screens/validation-transient-slab-dark-1600.webp" srcset="/screens/validation-transient-slab-dark-1600.webp 1600w, /screens/validation-transient-slab-dark-2400.webp 2400w" sizes="(max-width: 1272px) 100vw, 1176px" width="1600" height="1000" alt="Validation step for a transient slab: the exact series solution and the error against it node by node, under 0.008 degrees." />
+          </div>
         </div>
-        <noscript><p class="fine">Enable JavaScript to run the live example.</p></noscript>
+      </div>
+    </div>
+  </div>
+  <div class="cap" id="cap-a"><span>2-D plate, hot top edge, 31 × 31 grid</span><span><b>961</b> unknowns</span><span><b>130</b> Gauss–Seidel iterations, ω = 1.811</span></div>
+  <div class="cap" id="cap-b" hidden><span>Steel slab, left face stepped to 200 °C</span><span>max error <b>0.0070 °C</b> against the exact series at t = 120 s</span></div>
+
+  <div class="strip-label rv">In numbers</div>
+  <div class="nums">
+    <div class="num rv"><div class="num-v" data-count="2000">2,000</div><div class="num-l">nodes in the 1-D step-by-step solver</div></div>
+    <div class="num rv" style="--d:.05s"><div class="num-v" data-count="11">11</div><div class="num-l">workflow steps, statement to validation</div></div>
+    <div class="num rv" style="--d:.1s"><div class="num-v" data-count="3">3</div><div class="num-l">discretisations: FDM, FVM, FEM</div></div>
+    <div class="num rv" style="--d:.15s"><div class="num-v" data-count="3">3</div><div class="num-l">hand-written linear solvers</div></div>
+    <div class="num rv" style="--d:.2s"><div class="num-v">0</div><div class="num-l">calls to <span class="mono">numpy.linalg.solve</span></div></div>
+  </div>
+</section>
+
+<section class="sec" id="method">
+  <div class="wrap split">
+    <div class="frame rv">
+      <div class="card-ui" id="algo" tabindex="0" aria-label="Gaussian elimination walkthrough. Left and right arrow keys move between steps.">
+        <div class="ui-head"><span class="step-badge" id="algo-badge">STEP 0</span><span class="ui-title" id="algo-title">Initial augmented matrix [A | b]</span></div>
+        <div class="algo-body"><div id="algo-ops"></div><div id="algo-matrix" class="mx-wrap"></div></div>
+        <div class="ui-foot">
+          <button class="btn btn-line" id="algo-prev" type="button"><svg class="ic"><use href="#i-prev"/></svg>Prev</button>
+          <div class="prog" aria-hidden="true"><i id="algo-prog"></i></div>
+          <span class="count" id="algo-count"></span>
+          <button class="btn btn-ink" id="algo-next" type="button">Next<svg class="ic"><use href="#i-next"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="rv" style="--d:.1s">
+      <span class="eyebrow">Step-by-step elimination</span>
+      <h2>Have a linear system? <span class="gold">See every row operation before you trust it.</span></h2>
+      <p class="sub">A 0.5 m slab with five nodes, 373 K on the left face and 1000 W/m² entering on the right. The walkthrough runs the same algorithm as the solver, one pivot at a time.</p>
+      <div class="grid4">
+        <div><h3>Assemble the rows</h3><p>Central differences inside, boundary rows from the conditions you set, shown as the augmented matrix [A | b].</p></div>
+        <div><h3>Pivot and swap</h3><p>Partial pivoting picks the largest entry. Zero and near-zero pivots are caught before they do damage.</p></div>
+        <div><h3>Eliminate</h3><p>Each row operation is recorded with its factor, so you can redo it by hand and get the same numbers.</p></div>
+        <div><h3>Back-substitute</h3><p>Every line from the last unknown up, then the residual max|A·T − b| to prove the answer.</p></div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="workflow">
+<section class="sec sec-tight" id="try">
+  <div class="wrap split rev">
+    <div class="frame rv" style="--d:.1s">
+      <div class="card-ui" id="demo">
+        <div class="ui-head"><span class="live" aria-hidden="true"></span><span class="ui-title" style="color:var(--ink);font-weight:500">Transient slab</span><span class="chip">implicit</span><span class="chip">Fo = 1</span><span class="note">live in this page</span></div>
+        <div class="demo-body">
+          <svg id="slab" viewBox="0 0 720 230" role="img" aria-label="Plane slab of 5 mm with 6 nodes, insulated on the left and held at 250 °C on the right"></svg>
+          <div class="demo-grid">
+            <div class="reads">
+              <div class="read"><div class="k">Δx</div><div class="read-v">1 mm</div><div class="read-s">L/(N−1)</div></div>
+              <div class="read"><div class="k">Δt</div><div class="read-v">10.40 s</div><div class="read-s">Fo·Δx²/α</div></div>
+              <div class="read hot"><div class="k">Step</div><div class="read-v" id="ro-step">1 / 60</div><div class="read-s">t = <span id="ro-time">10.4</span> s</div></div>
+              <div class="read"><div class="k">α</div><div class="read-v">9.6154e−8</div><div class="read-s">m²/s</div></div>
+            </div>
+            <svg id="profile" viewBox="0 0 360 176" role="img" aria-label="Temperature profile across the slab at the current time step"></svg>
+          </div>
+          <div class="controls">
+            <button class="btn btn-ink" id="demo-play" type="button" aria-pressed="false"><svg class="ic"><use id="demo-play-icon" href="#i-play"/></svg><span id="demo-play-label">Play</span></button>
+            <button class="btn btn-line" id="demo-next" type="button"><svg class="ic"><use href="#i-step"/></svg>Step</button>
+            <button class="btn btn-line" id="demo-reset" type="button"><svg class="ic"><use href="#i-reset"/></svg>Restart</button>
+            <label class="scrub"><span class="sr-only">Time step</span><input type="range" id="demo-step" min="0" max="60" value="1" step="1" /></label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="rv">
+      <span class="eyebrow">Transient problems</span>
+      <h2>Watch a slab heat up, <span class="gold">one implicit step at a time.</span></h2>
+      <p class="sub">A 5 mm slab at 30 °C, insulated on the left, with the right face held at 250 °C. Each frame solves the −1, 3, −1 system for one time step of 10.40 s.</p>
+      <p class="sub">The fully implicit scheme is unconditionally stable, so Fo &gt; 0.5 is never flagged as unstable. Crank–Nicolson and explicit schemes are one click away in the solver.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec sec-tight" id="source">
+  <div class="wrap split">
+    <div class="frame rv">
+      <div class="card-ui">
+        <div class="expr-prev" id="expr-prev" aria-live="polite">q‴ = 5×10⁵ sin(πx/L)</div>
+        <div class="expr-body">
+          <label for="expr-in">f(x, y, z) in W/m³ <span>type LaTeX</span></label>
+          <input id="expr-in" type="text" spellcheck="false" autocomplete="off" value="5\times10^{5}\,\sin\left(\frac{\pi x}{L}\right)" />
+          <div class="expr-status" id="expr-status">Rendered live, the same way the solver's editor shows it.</div>
+          <div class="presets">
+            <button class="preset" type="button" aria-pressed="true" data-src="5\times10^{5}\,\sin\left(\frac{\pi x}{L}\right)">Sine</button>
+            <button class="preset" type="button" aria-pressed="false" data-src="10^{6}\,e^{-\left(\frac{x - L/2}{0.1L}\right)^{2}}">Hot spot</button>
+            <button class="preset" type="button" aria-pressed="false" data-src="4\times10^{5}\,\frac{x\,(L - x)}{L^{2}}">Parabolic</button>
+            <button class="preset" type="button" aria-pressed="false" data-src="5\times10^{5}\,\sin\left(\frac{\pi x}{L}\right)\sin\left(\frac{\pi y}{W}\right)">2-D bump</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="rv" style="--d:.1s">
+      <span class="eyebrow">Custom heat generation</span>
+      <h2>Any heat source you can write. <span class="gold">Typed like maths, solved like a matrix.</span></h2>
+      <p class="sub">Write q‴ as a function of position in plain maths or LaTeX: sin(πx/L), a Gaussian hot spot, a ramp, a 2-D bump. The editor previews it live, plots it across the domain and catches mistakes before you solve.</p>
+      <div class="grid4">
+        <div><h3>Plain maths or LaTeX</h3><p><span class="mono">5e5 sin(pi x / L)</span> and <span class="mono">\sin(\frac{\pi x}{L})</span> both work.</p></div>
+        <div><h3>Safe on the server</h3><p>An allow-list parser, never <span class="mono">eval</span>. Only maths functions and x, y, z, L, W, H.</p></div>
+        <div><h3>FDM, FVM and FEM</h3><p>Evaluated at every node, cell centre or element node, in 1-D, 2-D and 3-D.</p></div>
+        <div><h3>Checked against the closed form</h3><p>A sine source lands within 0.05 % of q₀L²/(kπ²) on 41 nodes, for all three methods.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="workflow">
   <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Workflow</div>
-      <h2>Preprocessor, solver, post-processor.</h2>
-      <p>The same three phases as the course notes, eleven steps in all. Every step keeps a live diagram of the current set-up and the governing equation for the physics you chose.</p>
+    <div class="center-head rv">
+      <span class="eyebrow">One connected workflow</span>
+      <h2>From problem statement to <span class="gold">validated answer.</span></h2>
+      <p class="sub">Three phases, eleven steps. A live diagram of the domain and the governing equation stay beside every step.</p>
     </div>
     <div class="phases">
-      <article class="phase" style="--accent:var(--pre);--soft:var(--pre-soft);--ring:var(--pre-ring);--text:var(--pre-text)">
-        <header class="phase-head"><span class="phase-num">1</span><div><div class="phase-label">Phase I</div><div class="phase-title">Preprocessor</div></div></header>
-        <p class="phase-desc">Describe the physics, the domain and the conditions on it.</p>
+      <article class="phase rv">
+        <div class="phase-n">I</div><span class="eyebrow">Phase I</span><h3>Preprocessor</h3><p>Describe the physics, the domain and the conditions on it.</p>
         <ol class="steps">
-          <li><span class="roman">I</span><span class="t">Problem statement<small>Conduction, convection–diffusion or convection · steady or unsteady · q‴ = q₀ + βT</small></span></li>
-          <li><span class="roman">II</span><span class="t">Geometry and grid<small>L, W, H and N<sub>x</sub>, N<sub>y</sub>, N<sub>z</sub> on a structured grid</small></span></li>
-          <li><span class="roman">III</span><span class="t">Physical phenomena<small>Prescribed velocity; Péclet, Fourier and Courant numbers</small></span></li>
-          <li><span class="roman">IV</span><span class="t">Material properties<small>k, ρ, c<sub>p</sub> for solids and fluids</small></span></li>
-          <li><span class="roman">V</span><span class="t">Initial and boundary conditions<small>Temperature, heat flux, convective, insulated, inflow, outflow</small></span></li>
+          <li><span class="r">I</span><span>Problem statement<small>Conduction, convection–diffusion or convection; steady or unsteady; 1-D to 3-D</small></span></li>
+          <li><span class="r">II</span><span>Geometry and grid<small>L, W, H and N<sub>x</sub>, N<sub>y</sub>, N<sub>z</sub></small></span></li>
+          <li><span class="r">III</span><span>Physical phenomena<small>Velocity; Péclet, Fourier and Courant numbers</small></span></li>
+          <li><span class="r">IV</span><span>Material properties<small>k, ρ, c<sub>p</sub> for solids and fluids</small></span></li>
+          <li><span class="r">V</span><span>Initial and boundary conditions<small>Temperature, flux, convective, insulated, inflow, outflow</small></span></li>
         </ol>
       </article>
-      <article class="phase" style="--accent:var(--sol);--soft:var(--sol-soft);--ring:var(--sol-ring);--text:var(--sol-text)">
-        <header class="phase-head"><span class="phase-num">2</span><div><div class="phase-label">Phase II</div><div class="phase-title">Solver</div></div></header>
-        <p class="phase-desc">Choose how to discretise, how to invert, and when to stop.</p>
+      <article class="phase rv" style="--d:.08s">
+        <div class="phase-n">II</div><span class="eyebrow">Phase II</span><h3>Solver</h3><p>Choose how to discretise, how to invert, and when to stop.</p>
         <ol class="steps">
-          <li><span class="roman">I</span><span class="t">Numerical method<small>FDM with ghost nodes · FVM with upwind, central or hybrid faces · Galerkin FEM</small></span></li>
-          <li><span class="roman">II</span><span class="t">Matrix inversion<small>Gauss–Seidel / SOR, Gauss elimination with partial pivoting, LU (PA = LU). All hand-written</small></span></li>
-          <li><span class="roman">III</span><span class="t">Convergence and initialisation<small>Tolerance, iteration cap, ω, initial guess, θ-scheme in time</small></span></li>
-          <li><span class="roman">IV</span><span class="t">Run calculation<small>Ctrl + Enter from any step</small></span></li>
+          <li><span class="r">I</span><span>Numerical method<small>FDM with ghost nodes, FVM with upwind, central or hybrid faces, Galerkin FEM</small></span></li>
+          <li><span class="r">II</span><span>Matrix inversion<small>Gauss–Seidel and SOR, Gauss elimination, LU with PA = LU</small></span></li>
+          <li><span class="r">III</span><span>Convergence<small>Tolerance, iteration cap, ω, initial guess, θ-scheme</small></span></li>
+          <li><span class="r">IV</span><span>Run calculation<small>Ctrl + Enter from any step</small></span></li>
         </ol>
       </article>
-      <article class="phase" style="--accent:var(--post);--soft:var(--post-soft);--ring:var(--post-ring);--text:var(--post-text)">
-        <header class="phase-head"><span class="phase-num">3</span><div><div class="phase-label">Phase III</div><div class="phase-title">Post-processing</div></div></header>
-        <p class="phase-desc">Read the answer, then check it against something exact.</p>
+      <article class="phase rv" style="--d:.16s">
+        <div class="phase-n">III</div><span class="eyebrow">Phase III</span><h3>Post-processing</h3><p>Read the answer, then check it against something exact.</p>
         <ol class="steps">
-          <li><span class="roman">I</span><span class="t">Results<small>Node / x / T table, fields, profiles, monitor-point history, [A] and its LU factors</small></span></li>
-          <li><span class="roman">II</span><span class="t">Validation<small>Exact solutions, error norms, residuals, grid-convergence study with the observed order</small></span></li>
+          <li><span class="r">I</span><span>Results<small>Node table, fields, profiles, monitor history, [A] and its LU factors</small></span></li>
+          <li><span class="r">II</span><span>Validation<small>Exact solutions, error norms, residuals, grid convergence with the observed order</small></span></li>
         </ol>
       </article>
     </div>
-    <p class="aside-note">Prefer the original tool? The <a href="/solver/#classic">classic 1-D solver</a> walks through seven steps and prints every Gauss-elimination row operation for small systems.</p>
   </div>
 </section>
 
-<section class="section section-alt" id="method">
+<section class="sec sec-tight" id="validation">
   <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Method</div>
-      <h2>Watch the elimination, row by row.</h2>
-      <p>This is the steady MST-1 example: a 0.5 m slab with five nodes, k = 1 W/m·K, 373 K on the left face and 1000 W/m² entering on the right. The walkthrough below runs the same algorithm as the API, written in plain JavaScript for this page.</p>
+    <div class="center-head rv">
+      <span class="eyebrow">Validation</span>
+      <h2>Every answer is checked <span class="gold">against an exact one.</span></h2>
+      <p class="sub">Where a closed-form or series solution exists, CFD Solver computes it alongside the numerical result and reports the error. These are measured runs.</p>
     </div>
-    <div class="method-grid">
-      <div class="derivation">
-        <div class="eq"><div class="eq-l">Governing equation</div><div class="eq-m"><span class="tex" data-tex="\frac{d^2T}{dx^2} + \frac{q'''}{k} = 0" data-block>d²T/dx² + q‴/k = 0</span></div></div>
-        <div class="eq"><div class="eq-l">Central difference</div><div class="eq-m"><span class="tex" data-tex="\left.\frac{d^2T}{dx^2}\right|_i \approx \frac{T_{i+1} - 2T_i + T_{i-1}}{\Delta x^2}" data-block>d²T/dx²|ᵢ ≈ (Tᵢ₊₁ − 2Tᵢ + Tᵢ₋₁) / Δx²</span></div></div>
-        <div class="eq"><div class="eq-l">Interior rows</div><div class="eq-m"><span class="tex" data-tex="-T_{i-1} + 2T_i - T_{i+1} = \frac{q'''}{k}\,\Delta x^2, \qquad i = 2 \ldots N-1" data-block>−Tᵢ₋₁ + 2Tᵢ − Tᵢ₊₁ = (q‴/k)·Δx²,  i = 2 … N−1</span></div></div>
-        <div class="eq"><div class="eq-l">Boundary rows</div><div class="eq-m"><span class="tex" data-tex="T_1 = 373, \qquad -T_4 + T_5 = \frac{q''\,\Delta x}{k} = 125" data-block>T₁ = 373,  −T₄ + T₅ = q″Δx/k = 125</span></div></div>
-        <div class="eq"><div class="eq-l">Linear system</div><div class="eq-m"><span class="tex" data-tex="[A]\{T\} = \{b\}, \qquad \Delta x = \frac{L}{N-1} = 0.125\ \mathrm{m}" data-block>[A]{T} = {b},  Δx = L/(N−1) = 0.125 m</span></div></div>
-        <div class="eq"><div class="eq-l">Transient rows</div><div class="eq-m"><span class="tex" data-tex="\begin{aligned} -\mathrm{Fo}\,T_{i-1}^{\,n+1} + (1+2\,\mathrm{Fo})\,T_i^{\,n+1} - \mathrm{Fo}\,T_{i+1}^{\,n+1} &= T_i^{\,n} + \mathrm{Fo}\,\frac{q'''}{k}\Delta x^2 \\ \mathrm{Fo} &= \frac{\alpha\,\Delta t}{\Delta x^2} \end{aligned}" data-block>−Fo·Tᵢ₋₁ⁿ⁺¹ + (1+2Fo)·Tᵢⁿ⁺¹ − Fo·Tᵢ₊₁ⁿ⁺¹ = Tᵢⁿ + Fo·(q‴/k)·Δx²,  Fo = αΔt/Δx²</span></div></div>
-        <p class="derivation-note">Rows that already have a zero below the pivot are skipped, so a tridiagonal system costs O(N²) instead of O(N³). A thousand nodes solve in well under a second. The fully implicit scheme is unconditionally stable, so ThermoSolve never labels Fo &gt; 0.5 as unstable.</p>
-      </div>
-
-      <div class="algo" id="algo" tabindex="0" aria-label="Gaussian elimination walkthrough. Use the left and right arrow keys to move between steps.">
-        <div class="algo-head">
-          <span class="step-badge" id="algo-badge">STEP 0</span>
-          <span class="algo-title" id="algo-title">Initial augmented matrix [A | b]</span>
-          <span class="badge badge-warning" id="algo-swap" hidden></span>
-        </div>
-        <div class="algo-body">
-          <div class="algo-ops" id="algo-ops"></div>
-          <div class="algo-matrix" id="algo-matrix"></div>
-        </div>
-        <div class="algo-foot">
-          <button class="btn btn-secondary btn-sm" id="algo-prev" type="button"><svg class="ic"><use href="#i-prev"/></svg>Prev</button>
-          <span class="algo-count mono" id="algo-count"></span>
-          <div class="algo-dots" id="algo-dots" role="tablist" aria-label="Steps"></div>
-          <button class="btn btn-primary btn-sm" id="algo-next" type="button">Next<svg class="ic"><use href="#i-next"/></svg></button>
-        </div>
+    <div class="vt rv">
+      <div class="vt-scroll">
+        <table>
+          <thead><tr><th>Problem</th><th>Method and grid</th><th>Exact solution</th><th>Error</th></tr></thead>
+          <tbody>
+            <tr><td data-label="Problem">Sine heat source, q‴ = 1000 sin(πx/L)<small>0.5 m slab, both faces at 0 °C</small></td><td data-label="Method and grid">FDM, FVM and FEM<small>41 nodes, Gauss elimination</small></td><td data-label="Exact solution">T = q₀L²/(kπ²) sin(πx/L)</td><td data-label="Error" class="err"><b>0.05 %</b> at the peak</td></tr>
+            <tr><td data-label="Problem">Temperature-dependent source, q‴ = 10 + 2T<small>1 m slab, faces at 0 and 1 °C</small></td><td data-label="Method and grid">FDM<small>11 nodes</small></td><td data-label="Exact solution">Cosine profile</td><td data-label="Error" class="err"><b>0.0037 °C</b> max</td></tr>
+            <tr><td data-label="Problem">Steel slab, face stepped to 200 °C<small>Other face insulated</small></td><td data-label="Method and grid">FDM, fully implicit<small>26 nodes</small></td><td data-label="Exact solution">Fourier series, t = 120 s</td><td data-label="Error" class="err"><b>0.0070 °C</b> max</td></tr>
+            <tr><td data-label="Problem">2-D plate, hot top edge at 100 °C<small>Other edges at 0 °C</small></td><td data-label="Method and grid">FDM, Gauss–Seidel with SOR<small>31 × 31 grid</small></td><td data-label="Exact solution">Fourier series</td><td data-label="Error" class="err"><b>0.069 °C</b> RMS</td></tr>
+            <tr><td data-label="Problem">Steady slab with heat flux in<small>373 K left, 1000 W/m² right</small></td><td data-label="Method and grid">FDM<small>5 nodes, the walkthrough above</small></td><td data-label="Exact solution">Linear profile, 125 K per interval</td><td data-label="Error" class="err"><b>1.1 × 10⁻¹³</b> residual</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
+    <p class="vt-note">The 2-D plate's largest error, 0.72 °C, sits in the corners where the hot edge meets a cold one and the series itself is discontinuous.</p>
   </div>
 </section>
 
-<section class="section" id="features">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Features</div>
-      <h2>Built to be read, not just run.</h2>
-      <p>Everything the solver computes is shown, in the order you would write it by hand.</p>
-    </div>
-    <div class="feats">
-      <article class="feat"><div class="ico"><svg class="ic"><use href="#i-list"/></svg></div><h3>Step-by-step derivation</h3><p>Governing equation, stencil, boundary rows and the assembled system, rendered with KaTeX for the exact problem you entered.</p></article>
-      <article class="feat"><div class="ico"><svg class="ic"><use href="#i-grid"/></svg></div><h3>Matrix and algorithm tabs</h3><p>The augmented matrix [A | b], each pivot, each row swap, each row operation, the upper-triangular system and every back-substitution line.</p></article>
-      <article class="feat"><div class="ico"><svg class="ic"><use href="#i-ruler"/></svg></div><h3>Live slab preview</h3><p>The diagram updates as you type. Edit any input after a solve and the result re-runs on its own, debounced.</p></article>
-      <article class="feat"><div class="ico"><svg class="ic"><use href="#i-playc"/></svg></div><h3>Transient playback</h3><p>Δt from a Fourier number or entered directly. Animated profile with playback controls and a T–t chart for any node you pick.</p></article>
-      <article class="feat"><div class="ico"><svg class="ic"><use href="#i-shield"/></svg></div><h3>Validation</h3><p>Residual max|A·T − b|, boundary residuals, energy balance, exact solutions where they exist, and a grid-convergence study with the observed order.</p></article>
-      <article class="feat"><div class="ico"><svg class="ic"><use href="#i-flask"/></svg></div><h3>Reference examples</h3><p>Load the MST-1 cases and course examples. Printed reference values sit next to computed ones with their differences, and never enter the solver.</p></article>
-      <article class="feat"><div class="ico"><svg class="ic"><use href="#i-download"/></svg></div><h3>Export</h3><p>PDF report with derivation, matrices, elimination steps and charts. CSV for node data. JSON for the full configuration and results.</p></article>
-      <article class="feat"><div class="ico"><svg class="ic"><use href="#i-thermo"/></svg></div><h3>Units that match the course</h3><p>m, cm, mm and °C, K on input. Switch the display unit in the results. SI internally, so the matrices look like hand calculations.</p></article>
-    </div>
-  </div>
-</section>
-
-<section class="section section-alt" id="validation">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Validation</div>
-      <h2>Reference values are compared, never copied.</h2>
-      <p>The solver computes every number itself. Printed course results are shown beside it, with the difference, so a slip in the source document shows up instead of being hidden.</p>
-    </div>
-    <div class="cmp-grid">
-      <div class="cmp">
-        <div class="cmp-head"><h3>MST-1 transient, first time step</h3><span class="badge badge-success">Matches to 0.01 °C</span><span class="sub">L = 5 mm, N = 6, k = 0.25, ρ = 1300, c<sub>p</sub> = 2000, T⁰ = 30 °C, adiabatic left, 250 °C right, Fo = 1</span></div>
-        <div class="cmp-table">
-          <table>
-            <thead><tr><th>Node</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr></thead>
-            <tbody>
-              <tr><td class="lbl">ThermoSolve (°C)</td><td>36.47</td><td>36.47</td><td>42.94</td><td>62.35</td><td>114.12</td><td>250</td></tr>
-              <tr><td class="lbl">MST-1 printed</td><td>36.47</td><td>36.47</td><td>42.94</td><td>62.36</td><td>114.12</td><td>250</td></tr>
-              <tr><td class="lbl">Difference</td><td class="ok">0</td><td class="ok">0</td><td class="ok">0</td><td class="ok">−0.01</td><td class="ok">0</td><td class="ok">0</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p>The exact T₄ is 62.353, so the printed 62.36 is rounding. The match needs the first-order adiabatic row <span class="tex" data-tex="T_1 = T_2">T₁ = T₂</span>. The ghost-node alternative gives 33.58, 35.37, 42.52 instead, which is how ThermoSolve identified the course's boundary treatment and why first order is the default.</p>
-      </div>
-      <div class="cmp">
-        <div class="cmp-head"><h3>MST-1 steady</h3><span class="badge badge-warning">Printed values not reproducible</span><span class="sub">L = 0.5 m, N = 5, k = 1, T(0) = 373 K, q″(L) = 1000 W/m² in, q‴ = 0</span></div>
-        <div class="cmp-table">
-          <table>
-            <thead><tr><th>Node</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr></thead>
-            <tbody>
-              <tr><td class="lbl">ThermoSolve (K)</td><td>373</td><td>498</td><td>623</td><td>748</td><td>873</td></tr>
-              <tr><td class="lbl">MST-1 printed</td><td>373</td><td>431.86</td><td>577.31</td><td>711.54</td><td>836.54</td></tr>
-              <tr><td class="lbl">Difference</td><td class="ok">0</td><td class="bad">+66.14</td><td class="bad">+45.69</td><td class="bad">+36.46</td><td class="bad">+36.46</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p>With q‴ = 0 and constant k the profile must be linear, so every interval is <span class="tex" data-tex="q''\Delta x / k = 125\ \mathrm{K}">q″Δx/k = 125 K</span>. The printed intervals 58.86, 145.45, 134.23 and 125 cannot come from any uniform stencil. The app labels this case a reference example and shows both columns.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="api" id="api">
-  <div class="wrap">
+<section class="wrap" aria-label="Why CFD Solver">
+  <div class="band rv">
+    <canvas id="field" aria-hidden="true"></canvas>
     <div>
-      <div class="section-head">
-        <div class="eyebrow">API</div>
-        <h2>The same solver, over HTTP.</h2>
-        <p>A FastAPI service assembles the system, eliminates, and returns every intermediate quantity as JSON. The web app does no numerical work of its own. Interactive docs live at <span class="mono">/docs</span>.</p>
-      </div>
-      <ul class="endpoints">
-        <li><span class="method m-get">GET</span><span><span class="path">/api/health</span><span class="why">Liveness</span></span></li>
-        <li><span class="method m-get">GET</span><span><span class="path">/api/examples</span><span class="why">Example catalogue with reference values</span></span></li>
-        <li><span class="method m-post">POST</span><span><span class="path">/api/solve/steady</span><span class="why">Solve a steady problem</span></span></li>
-        <li><span class="method m-post">POST</span><span><span class="path">/api/solve/transient</span><span class="why">Solve a transient problem</span></span></li>
-        <li><span class="method m-post">POST</span><span><span class="path">/api/validate</span><span class="why">Validate inputs without solving</span></span></li>
-        <li><span class="method m-post">POST</span><span><span class="path">/api/report/pdf</span><span class="why">PDF report: derivation, matrices, charts, validation</span></span></li>
-        <li><span class="method m-post">POST</span><span><span class="path">/api/v2/simulate</span><span class="why">Three-phase engine: FDM, FVM, FEM in 1-D, 2-D, 3-D</span></span></li>
+      <h2>Don’t just get the answer. <span>See how it was found.</span></h2>
+      <p>Every pivot, every iteration and every residual is on screen, next to the exact solution where one exists. The glow behind this text is a live 2-D heat simulation; move your pointer over it.</p>
+    </div>
+    <a class="btn btn-white" href="/solver/">Open the solver <svg class="ic arrow"><use href="#i-arrow"/></svg></a>
+  </div>
+</section>
+
+<section class="sec" id="api">
+  <div class="wrap split">
+    <div class="rv">
+      <span class="eyebrow">API</span>
+      <h2>The same solver, <span class="gold">over HTTP.</span></h2>
+      <p class="sub">A FastAPI service assembles the system, solves it and returns every intermediate quantity as JSON. Interactive docs live at <span class="mono">/docs</span>.</p>
+      <ul class="eps">
+        <li><span class="m get">GET</span><span><span class="p">/api/examples</span><span class="why">Example catalogue</span></span></li>
+        <li><span class="m post">POST</span><span><span class="p">/api/solve/steady</span><span class="why">Steady 1-D solve with the full elimination record</span></span></li>
+        <li><span class="m post">POST</span><span><span class="p">/api/solve/transient</span><span class="why">Fully implicit time marching</span></span></li>
+        <li><span class="m post">POST</span><span><span class="p">/api/v2/simulate</span><span class="why">Three-phase engine with custom heat sources</span></span></li>
+        <li><span class="m post">POST</span><span><span class="p">/api/report/pdf</span><span class="why">Derivation, matrices, charts and validation as a PDF</span></span></li>
       </ul>
     </div>
-    <div class="code-card">
-      <div class="code-head"><span>Steady request</span><span class="mono">POST /api/solve/steady</span></div>
-<pre class="code">{
+    <div class="code rv" style="--d:.1s">
+      <div class="code-bar">
+        <div class="tabs" role="tablist" aria-label="Code sample">
+          <button class="tab" role="tab" aria-selected="true" data-code="req">Request</button>
+          <button class="tab" role="tab" aria-selected="false" data-code="res">Response</button>
+          <button class="tab" role="tab" aria-selected="false" data-code="curl">curl</button>
+        </div>
+        <button class="copy" id="copy" type="button"><svg class="ic" style="width:14px;height:14px"><use href="#i-copy"/></svg><span id="copy-l">Copy</span></button>
+      </div>
+<pre data-pane="req">{
   <span class="k">"length"</span>: <span class="n">0.5</span>, <span class="k">"length_unit"</span>: <span class="s">"m"</span>, <span class="k">"nodes"</span>: <span class="n">5</span>,
   <span class="k">"thermal_conductivity"</span>: <span class="n">1.0</span>, <span class="k">"heat_generation"</span>: <span class="n">0</span>,
   <span class="k">"left_boundary"</span>:  { <span class="k">"type"</span>: <span class="s">"temperature"</span>, <span class="k">"value"</span>: <span class="n">373</span> },
-  <span class="k">"right_boundary"</span>: { <span class="k">"type"</span>: <span class="s">"heat_flux"</span>,   <span class="k">"value"</span>: <span class="n">1000</span> },
-  <span class="k">"temperature_unit"</span>: <span class="s">"K"</span>, <span class="k">"boundary_scheme"</span>: <span class="s">"first_order"</span>
+  <span class="k">"right_boundary"</span>: { <span class="k">"type"</span>: <span class="s">"heat_flux"</span>, <span class="k">"value"</span>: <span class="n">1000</span> },
+  <span class="k">"temperature_unit"</span>: <span class="s">"K"</span>,
+  <span class="k">"boundary_scheme"</span>: <span class="s">"first_order"</span>
 }</pre>
-      <div class="code-head" style="margin-top:14px"><span>Response, abridged</span><span class="mono">200 OK · 0.4 ms</span></div>
-<pre class="code">{
+<pre data-pane="res" hidden>{
   <span class="k">"success"</span>: <span class="n">true</span>, <span class="k">"dx"</span>: <span class="n">0.125</span>,
   <span class="k">"solution"</span>: [<span class="n">373</span>, <span class="n">498</span>, <span class="n">623</span>, <span class="n">748</span>, <span class="n">873</span>],
-  <span class="k">"gaussian"</span>: { <span class="k">"steps"</span>: [ { <span class="k">"operations"</span>: [ <span class="s">"R2 → R2 + 1·R1"</span>, <span class="cm">…</span> ] }, <span class="cm">…</span> ] },
-  <span class="k">"validation"</span>: { <span class="k">"residual"</span>: <span class="n">0.0</span>, <span class="k">"passed"</span>: <span class="n">true</span> }, <span class="cm">…</span>
+  <span class="k">"gaussian"</span>: {
+    <span class="k">"steps"</span>: [{ <span class="k">"pivot_value"</span>: <span class="n">1.0</span>, <span class="k">"operations"</span>: [
+      { <span class="k">"description"</span>: <span class="s">"R2 → R2 + 1·R1"</span>, <span class="k">"factor"</span>: <span class="n">-1.0</span> }] }, <span class="cm">…</span> ],
+    <span class="k">"back_substitution"</span>: [ <span class="cm">…</span> ]
+  },
+  <span class="k">"validation"</span>: { <span class="k">"status"</span>: <span class="s">"validated"</span>, <span class="k">"residual_max"</span>: <span class="n">1.1e-13</span> },
+  <span class="k">"execution_time_ms"</span>: <span class="n">1.05</span>, <span class="cm">…</span>
 }</pre>
-      <div class="chips-l">Every response also carries</div>
-      <div class="chips">
-        <span class="badge badge-dark">x</span><span class="badge badge-dark">matrix</span><span class="badge badge-dark">bands</span><span class="badge badge-dark">rhs</span><span class="badge badge-dark">equations</span><span class="badge badge-dark">explanation</span><span class="badge badge-dark">summary</span><span class="badge badge-dark">warnings</span><span class="badge badge-dark">execution_time_ms</span>
-      </div>
-      <div class="chips-l">Errors come back as 422 with a plain message, such as “Length must be greater than zero.” Stack traces are never exposed.</div>
+<pre data-pane="curl" hidden><span class="cm"># CFD_SOLVER_API is your API base URL</span>
+curl -X POST <span class="s">"$CFD_SOLVER_API/api/solve/steady"</span> \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"length":0.5,"length_unit":"m","nodes":5,
+       "thermal_conductivity":1,"heat_generation":0,
+       "left_boundary":{"type":"temperature","value":373},
+       "right_boundary":{"type":"heat_flux","value":1000},
+       "temperature_unit":"K","boundary_scheme":"first_order"}'</span></pre>
+      <div class="code-foot">Response abridged from a real run. Errors return HTTP 422 with a plain message, such as “Length must be greater than zero.”</div>
     </div>
   </div>
 </section>
 
-<section class="section" id="stack">
+<section class="sec sec-tight" id="faq">
   <div class="wrap">
-    <div class="stack-rows">
-      <div class="stack-row"><span class="lbl">Front end</span><span class="chip">React 19</span><span class="chip">TypeScript</span><span class="chip">Vite 8</span><span class="chip">Tailwind CSS 4</span><span class="chip">Radix UI</span><span class="chip">Recharts</span><span class="chip">KaTeX</span><span class="chip">Vercel</span></div>
-      <div class="stack-row"><span class="lbl">API</span><span class="chip">Python 3.12</span><span class="chip">FastAPI</span><span class="chip">Pydantic</span><span class="chip">NumPy</span><span class="chip">Matplotlib</span><span class="chip">ReportLab</span><span class="chip">pytest</span><span class="chip">Render</span></div>
+    <div class="center-head rv"><span class="eyebrow">FAQ</span><h2>Common questions.</h2></div>
+    <div class="faq rv">
+      <details><summary>Is CFD Solver free?<span class="pm" aria-hidden="true"></span></summary><div class="a">Yes. There is no account and nothing to install. Open the solver and start from a blank problem or one of the examples.</div></details>
+      <details><summary>Can I use my own heat generation, such as sin(πx/L)?<span class="pm" aria-hidden="true"></span></summary><div class="a">Yes. In step I choose <b>Custom f(x, y, z)</b> and type the expression in plain maths or LaTeX, for example <code>5e5 sin(pi x / L)</code>. You can still add a βT term. The expression depends on position, not on time.</div></details>
+      <details><summary>Why not just call numpy.linalg.solve?<span class="pm" aria-hidden="true"></span></summary><div class="a">Because the point is to see the elimination. Gaussian elimination, LU and Gauss–Seidel are written by hand so every pivot, swap and row operation can be recorded. The test suite compares them with NumPy.</div></details>
+      <details><summary>Is Fo &gt; 0.5 unstable?<span class="pm" aria-hidden="true"></span></summary><div class="a">Only for the explicit scheme. The fully implicit scheme is unconditionally stable for the diffusion equation, so CFD Solver never flags Fo &gt; 0.5 there. It warns when a very large Fo (above 10) may hurt accuracy.</div></details>
+      <details><summary>Which units can I use?<span class="pm" aria-hidden="true"></span></summary><div class="a">Lengths in m, cm or mm and temperatures in °C or K. Everything is SI internally, and the display unit can be switched in the results.</div></details>
+      <details><summary>Is anything I enter stored?<span class="pm" aria-hidden="true"></span></summary><div class="a">Your set-up is sent to the API to be solved and is not kept there. The app saves your current set-up in your own browser so it survives a reload. The <a href="/privacy/" style="color:var(--gold-ink)">privacy policy</a> has the details.</div></details>
     </div>
-    <div class="cta">
-      <div>
-        <h2>Set up a slab. Watch it solve.</h2>
-        <p>Load an MST-1 example from the Examples menu, press Ctrl + Enter, and open the Algorithm tab.</p>
-      </div>
-      <div class="cta-row">
-        <a class="btn btn-primary btn-lg" href="/solver/">Open the solver <svg class="ic"><use href="#i-arrow"/></svg></a>
-        <a class="btn btn-secondary btn-lg" href="/solver/#classic">Classic 1-D mode</a>
-      </div>
-    </div>
+  </div>
+</section>
+
+<section class="wrap center-head rv" style="margin-bottom:0" aria-label="Get started">
+  <span class="eyebrow">Start with the statement</span>
+  <h2>Have a heat transfer problem? <span class="gold">Solve it step by step.</span></h2>
+  <p class="sub">Load an example from the Examples menu, press Ctrl + Enter, and open the results.</p>
+  <div class="cta-row">
+    <a class="btn btn-gold" href="/solver/">Try it for free <svg class="ic arrow"><use href="#i-arrow"/></svg></a>
+    <a class="btn btn-line" href="/solver/#classic">Classic 1-D mode</a>
   </div>
 </section>
 </main>
 
-<footer class="footer">
+<footer class="foot">
   <div class="wrap">
-    <div>
-      <div><strong style="color:var(--fg-2)">ThermoSolve</strong> · 1-D heat conduction numerical solver · built for ME46220</div>
-      <ul class="footer-links">
-        <li><a href="/solver/">Open the solver</a></li>
-        <li><a href="/solver/#classic">Classic 1-D mode</a></li>
-        <li><a href="https://github.com/shivam-anand-03/thermosolver-ui" target="_blank" rel="noopener">thermosolver-ui</a></li>
-        <li><a href="https://github.com/shivam-anand-03/thermosolver-server" target="_blank" rel="noopener">thermosolver-server</a></li>
-      </ul>
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="/"><img src="/favicon.png" alt="" width="30" height="30" /><span>CFD <span class="accent">Solver</span></span></a>
+        <p class="blurb">A heat transfer solver that shows its working.</p>
+      </div>
+      <div><h4>Product</h4><ul><li><a href="/solver/">Solver</a></li><li><a href="/solver/#classic">Classic 1-D mode</a></li><li><a href="#source">Heat sources</a></li><li><a href="#faq">FAQ</a></li></ul></div>
+      <div><h4>Source</h4><ul><li><a href="https://github.com/shivam-anand-03/thermosolver-ui" target="_blank" rel="noopener">Web app</a></li><li><a href="https://github.com/shivam-anand-03/thermosolver-server" target="_blank" rel="noopener">API</a></li><li><a href="https://github.com/shivam-anand-03/thermosolver-ui/issues" target="_blank" rel="noopener">Report an issue</a></li></ul></div>
+      <div><h4>Legal</h4><ul><li><a href="/terms/">Terms of service</a></li><li><a href="/privacy/">Privacy policy</a></li></ul></div>
     </div>
-    <div class="sig" aria-label="Signed by Shivam">
-      <svg viewBox="0 0 150 60" aria-hidden="true"><text x="6" y="42" font-family="'Mrs Saint Delafield', cursive" font-size="46" fill="#1f2a44" stroke="#1f2a44" stroke-width="0.6" stroke-dasharray="520">Shivam</text></svg>
+    <div class="foot-bottom">
+      <span>© 2026 CFD Solver. Results are for learning; check them before relying on them.</span>
+      <div class="sig rv" aria-label="Signed by Shivam"><svg viewBox="0 0 150 60" aria-hidden="true"><text x="6" y="42" font-family="'Mrs Saint Delafield', cursive" font-size="46" stroke-width="0.6">Shivam</text></svg></div>
     </div>
   </div>
 </footer>
@@ -601,8 +737,12 @@ h1 { font-size: clamp(34px, 4.6vw, 56px); line-height: 1.05; letter-spacing: -.0
 (function () {
   'use strict';
   var $ = function (s, r) { return (r || document).querySelector(s); };
-  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var SVG = 'http://www.w3.org/2000/svg';
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var canObserve = 'IntersectionObserver' in window;
+  var root = document.documentElement;
+  if (!reduced && canObserve) root.classList.add('js-motion');
+  if (!reduced) root.classList.add('motion-ok');
 
   function fmt(v, sig, ascii) {
     sig = sig || 5;
@@ -614,27 +754,34 @@ h1 { font-size: clamp(34px, 4.6vw, 56px); line-height: 1.05; letter-spacing: -.0
     return ascii ? s : s.replace(/-/g, '−');
   }
   function fix2(v) { return String(Math.round(v * 100) / 100); }
-
-  /* sequential heat colour, cool blue to warm orange, t in [0, 1] (same stops as the app) */
-  function heatColor(t) {
-    var stops = [[205, 226, 251], [134, 182, 239], [253, 230, 200], [251, 176, 120], [235, 104, 52]];
-    var x = Math.min(1, Math.max(0, t)) * (stops.length - 1);
-    var i = Math.min(stops.length - 2, Math.floor(x)), f = x - i;
-    var c = stops[i].map(function (v, k) { return Math.round(v + (stops[i + 1][k] - v) * f); });
-    return 'rgb(' + c[0] + ', ' + c[1] + ', ' + c[2] + ')';
+  function ramp(t, stops) {
+    var x = Math.min(1, Math.max(0, t)) * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(x)), f = x - i;
+    return [0, 1, 2].map(function (k) { return Math.round(stops[i][k] + (stops[i + 1][k] - stops[i][k]) * f); });
+  }
+  var SLAB = [[205, 226, 251], [134, 182, 239], [253, 230, 200], [251, 176, 120], [235, 104, 52]];
+  var GOLD = [[18, 14, 6], [58, 42, 14], [140, 98, 26], [212, 161, 47], [240, 205, 120], [255, 242, 205]];
+  function slabColor(t) { return 'rgb(' + ramp(t, SLAB).join(',') + ')'; }
+  function renderTex(rootEl) {
+    if (!window.katex) return;
+    $$('[data-tex]', rootEl).forEach(function (el) {
+      try { katex.render(el.getAttribute('data-tex'), el, { throwOnError: false, displayMode: el.hasAttribute('data-block'), output: 'html' }); } catch (e) {}
+    });
+  }
+  function onVisible(el, cb, opts) {
+    if (!el) return;
+    if (!canObserve) { cb(true); return; }
+    new IntersectionObserver(function (es) { es.forEach(function (e) { cb(e.isIntersecting); }); }, opts || { threshold: 0.05 }).observe(el);
   }
 
-  /* Gaussian elimination with partial pivoting; records every pivot, swap and row operation like the API */
+  /* Gaussian elimination with partial pivoting, recording every step like the solver */
   function eliminate(A0, b0) {
-    var n = b0.length;
-    var M = A0.map(function (r, i) { return r.concat([b0[i]]); });
+    var n = b0.length, M = A0.map(function (r, i) { return r.concat([b0[i]]); });
     var snap = function () { return M.map(function (r) { return r.slice(); }); };
     var steps = [], initial = snap(), k, i, j;
     for (k = 0; k < n - 1; k++) {
       var p = k;
       for (i = k + 1; i < n; i++) if (Math.abs(M[i][k]) > Math.abs(M[p][k])) p = i;
-      var swapped = p !== k;
-      if (swapped) { var t = M[k]; M[k] = M[p]; M[p] = t; }
+      if (p !== k) { var t = M[k]; M[k] = M[p]; M[p] = t; }
       var pivot = M[k][k], ops = [];
       for (i = k + 1; i < n; i++) {
         var a = M[i][k];
@@ -642,19 +789,17 @@ h1 { font-size: clamp(34px, 4.6vw, 56px); line-height: 1.05; letter-spacing: -.0
         var f = a / pivot;
         for (j = k; j <= n; j++) M[i][j] -= f * M[k][j];
         M[i][k] = 0;
-        var sign = f < 0 ? '+' : '-', mag = Math.abs(f);
-        ops.push({
-          target: i + 1, factor: f,
-          tex: 'R_{' + (i + 1) + '} \\rightarrow R_{' + (i + 1) + '} ' + sign + ' ' + fmt(mag, 5, true) + '\\,R_{' + (k + 1) + '}',
-          plain: 'R' + (i + 1) + ' → R' + (i + 1) + ' ' + (f < 0 ? '+' : '−') + ' ' + fmt(mag) + '·R' + (k + 1)
-        });
+        var mag = Math.abs(f);
+        ops.push({ target: i + 1, factor: f,
+          tex: 'R_{' + (i + 1) + '} \\rightarrow R_{' + (i + 1) + '} ' + (f < 0 ? '+' : '-') + ' ' + fmt(mag, 5, true) + '\\,R_{' + (k + 1) + '}',
+          plain: 'R' + (i + 1) + ' → R' + (i + 1) + ' ' + (f < 0 ? '+' : '−') + ' ' + fmt(mag) + '·R' + (k + 1) });
       }
-      steps.push({ step: k + 1, pivotRow: k + 1, pivotCol: k + 1, pivotValue: pivot, swapped: swapped, swapWith: p + 1, operations: ops, matrix: snap() });
+      steps.push({ step: k + 1, pivotRow: k + 1, pivotCol: k + 1, pivotValue: pivot, operations: ops, matrix: snap() });
     }
     var x = new Array(n).fill(0), back = [];
     for (i = n - 1; i >= 0; i--) {
       var s = M[i][n], terms = [];
-      for (j = i + 1; j < n; j++) if (Math.abs(M[i][j]) > 1e-14) { s -= M[i][j] * x[j]; terms.push({ a: M[i][j], j: j + 1, x: x[j] }); }
+      for (j = i + 1; j < n; j++) if (Math.abs(M[i][j]) > 1e-14) { s -= M[i][j] * x[j]; terms.push({ a: M[i][j], x: x[j] }); }
       x[i] = s / M[i][i];
       back.push({ i: i + 1, b: M[i][n], terms: terms, diag: M[i][i], value: x[i] });
     }
@@ -663,224 +808,283 @@ h1 { font-size: clamp(34px, 4.6vw, 56px); line-height: 1.05; letter-spacing: -.0
     return { initial: initial, steps: steps, back: back, solution: x, residual: res };
   }
 
-  function renderTex(root) {
-    if (!window.katex) return;
-    (root || document).querySelectorAll('[data-tex]').forEach(function (el) {
-      try { katex.render(el.getAttribute('data-tex'), el, { throwOnError: false, displayMode: el.hasAttribute('data-block'), output: 'html' }); } catch (e) { /* keep fallback text */ }
+  /* ---------- theme, headline, reveals, counters, tilt, tabs, copy ---------- */
+  function chrome() {
+    var themeBtn = $('#theme');
+    themeBtn.addEventListener('click', function () {
+      var dark = !root.classList.contains('dark');
+      var apply = function () {
+        root.classList.toggle('dark', dark);
+        try { localStorage.setItem('thermosolve-theme', dark ? 'dark' : 'light'); } catch (e) {}
+      };
+      themeBtn.removeAttribute('data-pulse'); void themeBtn.offsetWidth; themeBtn.setAttribute('data-pulse', '1');
+      if (!document.startViewTransition || reduced) { apply(); return; }
+      // radial reveal from the centre of the toggle, reaching the farthest corner of the viewport
+      var b = themeBtn.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2;
+      var r = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+      var vt = document.startViewTransition(apply);
+      vt.ready.then(function () {
+        root.animate({ clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + r + 'px at ' + x + 'px ' + y + 'px)'] },
+          { duration: 650, easing: 'cubic-bezier(.4, 0, .2, 1)', pseudoElement: '::view-transition-new(root)' });
+      }).catch(function () {});
+    });
+
+    var wi = 0;
+    if (root.classList.contains('js-motion')) {
+      $$('#headline .line').forEach(function (line) {
+        var words = line.textContent.split(/(\s+)/); line.textContent = '';
+        words.forEach(function (part) {
+          if (!part) return;
+          if (/^\s+$/.test(part)) { line.appendChild(document.createTextNode(part)); return; }
+          var s = document.createElement('span'); s.className = 'w'; s.style.setProperty('--i', wi++); s.textContent = part; line.appendChild(s);
+        });
+      });
+    }
+
+    function countUp(el) {
+      var end = Number(el.getAttribute('data-count')), t0 = null, dur = 1100;
+      if (reduced) return;
+      function tick(t) { if (!t0) t0 = t; var p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = Math.round(end * e).toLocaleString('en-US'); if (p < 1) requestAnimationFrame(tick); }
+      requestAnimationFrame(tick);
+    }
+    if (canObserve) {
+      var io = new IntersectionObserver(function (es) {
+        es.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          e.target.classList.add('in');
+          var c = e.target.querySelector('[data-count]'); if (c) countUp(c);
+          io.unobserve(e.target);
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+      $$('.rv').forEach(function (el) { io.observe(el); });
+      // safety net: anchor jumps and fast scrolls can skip past an element without it ever intersecting
+      var pending = false;
+      var sweep = function () {
+        pending = false;
+        $$('.rv:not(.in)').forEach(function (el) {
+          if (el.getBoundingClientRect().top < window.innerHeight) {
+            el.classList.add('in'); io.unobserve(el);
+            var c = el.querySelector('[data-count]'); if (c) countUp(c);
+          }
+        });
+      };
+      window.addEventListener('scroll', function () { if (!pending) { pending = true; setTimeout(sweep, 120); } }, { passive: true });
+      setTimeout(sweep, 300);
+    }
+
+    var show = $('#showcase'), ticking = false;
+    function update() {
+      ticking = false;
+      if (!show || reduced) return;
+      var r = show.getBoundingClientRect(), vh = window.innerHeight, p = Math.min(1, Math.max(0, (vh - r.top) / (vh * 0.7)));
+      show.style.setProperty('--tilt', (12 * (1 - p)).toFixed(2) + 'deg');
+    }
+    window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+    window.addEventListener('resize', update); update();
+
+    $$('.win-bar .tab').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        var which = tab.id === 'tab-a' ? 'a' : 'b';
+        $$('.win-bar .tab').forEach(function (t) { t.setAttribute('aria-selected', t === tab ? 'true' : 'false'); });
+        $('#shot-a').setAttribute('aria-hidden', which === 'a' ? 'false' : 'true');
+        $('#shot-b').setAttribute('aria-hidden', which === 'b' ? 'false' : 'true');
+        $('#cap-a').hidden = which !== 'a'; $('#cap-b').hidden = which !== 'b';
+        $('#shot-route').textContent = tab.getAttribute('data-route');
+      });
+    });
+
+    var current = 'req';
+    $$('.code .tab').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        current = tab.getAttribute('data-code');
+        $$('.code .tab').forEach(function (t) { t.setAttribute('aria-selected', t === tab ? 'true' : 'false'); });
+        $$('.code pre').forEach(function (p) { p.hidden = p.getAttribute('data-pane') !== current; });
+      });
+    });
+    var copyL = $('#copy-l');
+    $('#copy').addEventListener('click', function () {
+      var pre = $('.code pre[data-pane="' + current + '"]'), text = pre.textContent;
+      var done = function (msg) { copyL.textContent = msg; setTimeout(function () { copyL.textContent = 'Copy'; }, 1600); };
+      var select = function () { var r = document.createRange(); r.selectNodeContents(pre); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); done('Selected'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { done('Copied'); }, select); else select();
     });
   }
 
-  /* ---------------- hero: MST-1 transient, solved live ---------------- */
-  function heroDemo() {
+  /* ---------- live 2-D heat field (explicit FTCS) behind the dark band ---------- */
+  function heatField(canvas, host) {
+    if (!canvas || !canvas.getContext) return;
+    var W = 140, H = 46, r = 0.22, ctx = canvas.getContext('2d');
+    canvas.width = W; canvas.height = H;
+    var T = new Float32Array(W * H), N = new Float32Array(W * H), img = ctx.createImageData(W, H);
+    var lut = []; for (var i = 0; i < 256; i++) lut.push(ramp(i / 255, GOLD));
+    var src = { x: W * 0.25, y: H * 0.5 }, pointer = null, lastMove = 0, t = 0, running = false, visible = false;
+    function stepSim() {
+      var x, y, k, R = 5;
+      for (y = 1; y < H - 1; y++) for (x = 1; x < W - 1; x++) { k = y * W + x; N[k] = T[k] + r * (T[k - 1] + T[k + 1] + T[k - W] + T[k + W] - 4 * T[k]) - 0.002 * T[k]; }
+      for (y = Math.max(1, Math.floor(src.y - R)); y < Math.min(H - 1, src.y + R); y++) for (x = Math.max(1, Math.floor(src.x - R)); x < Math.min(W - 1, src.x + R); x++) {
+        var d2 = (x - src.x) * (x - src.x) + (y - src.y) * (y - src.y);
+        if (d2 < R * R) { k = y * W + x; N[k] += 0.05 * (1 - d2 / (R * R)) * (1.1 - N[k]); }
+      }
+      var tmp = T; T = N; N = tmp;
+    }
+    function draw() {
+      var d = img.data;
+      for (var k = 0; k < W * H; k++) { var v = Math.min(255, Math.max(0, Math.floor(T[k] * 255))), c = lut[v], o = k * 4; d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = Math.min(255, v * 2); }
+      ctx.putImageData(img, 0, 0);
+    }
+    function moveSource() {
+      t += 0.006;
+      var auto = { x: W * (0.28 + 0.2 * Math.sin(t * 1.3)), y: H * (0.5 + 0.3 * Math.sin(t * 2.1 + 1)) };
+      var target = pointer && performance.now() - lastMove < 2500 ? pointer : auto;
+      src.x += (target.x - src.x) * 0.06; src.y += (target.y - src.y) * 0.06;
+    }
+    function frame() { if (!running) return; for (var s = 0; s < 3; s++) { moveSource(); stepSim(); } draw(); requestAnimationFrame(frame); }
+    function setRunning() { var was = running; running = visible && !document.hidden && !reduced; if (running && !was) requestAnimationFrame(frame); }
+    host.addEventListener('pointermove', function (e) { var b = canvas.getBoundingClientRect(); pointer = { x: (e.clientX - b.left) / b.width * W, y: (e.clientY - b.top) / b.height * H }; lastMove = performance.now(); }, { passive: true });
+    for (var w = 0; w < 260; w++) { moveSource(); stepSim(); }
+    draw();
+    onVisible(canvas, function (v) { visible = v; setRunning(); });
+    document.addEventListener('visibilitychange', setRunning);
+  }
+
+  /* ---------- live transient slab ---------- */
+  function slabDemo() {
     var L = 0.005, N = 6, k = 0.25, rho = 1300, cp = 2000, T0 = 30, TR = 250, Fo = 1, STEPS = 60;
-    var dx = L / (N - 1), alpha = k / (rho * cp), dt = Fo * dx * dx / alpha;
+    var dx = L / (N - 1), alpha = k / (rho * cp), dt = Fo * dx * dx / alpha, i;
     function advance(prev) {
       var A = [], b = [];
-      for (var i = 0; i < N; i++) {
+      for (var q = 0; q < N; q++) {
         var row = new Array(N).fill(0);
-        if (i === 0) { row[0] = 1; row[1] = -1; b.push(0); }
-        else if (i === N - 1) { row[N - 1] = 1; b.push(TR); }
-        else { row[i - 1] = -Fo; row[i] = 1 + 2 * Fo; row[i + 1] = -Fo; b.push(prev[i]); }
+        if (q === 0) { row[0] = 1; row[1] = -1; b.push(0); }
+        else if (q === N - 1) { row[N - 1] = 1; b.push(TR); }
+        else { row[q - 1] = -Fo; row[q] = 1 + 2 * Fo; row[q + 1] = -Fo; b.push(prev[q]); }
         A.push(row);
       }
       return eliminate(A, b).solution;
     }
     var frames = [new Array(N).fill(T0)];
     for (var s = 1; s <= STEPS; s++) frames.push(advance(frames[s - 1]));
-
-    var slab = $('#slab'), prof = $('#profile');
-    if (!slab || !prof) return;
-
-    /* slab diagram, same geometry as the app's SlabDiagram */
-    var W = 720, X0 = 168, X1 = 552, YC = 124, SH = 36, i;
-    var xs = []; for (i = 0; i < N; i++) xs.push(X0 + (X1 - X0) * i / (N - 1));
-    var h = '<defs>' +
-      '<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>' +
-      '<pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="#94a3b8" stroke-width="2"/></pattern>' +
-      '<linearGradient id="slabgrad" x1="0" x2="1" y1="0" y2="0">';
+    var slab = $('#slab'), prof = $('#profile'); if (!slab || !prof) return;
+    var X0 = 168, X1 = 552, YC = 120, SH = 36, xs = [];
+    for (i = 0; i < N; i++) xs.push(X0 + (X1 - X0) * i / (N - 1));
+    var h = '<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="s-muted"/></marker>' +
+      '<pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" class="s-hatch" stroke-width="2"/></pattern><linearGradient id="sg" x1="0" x2="1">';
     for (i = 0; i < N; i++) h += '<stop id="st' + i + '" offset="' + (100 * i / (N - 1)) + '%" stop-color="#cde2fb"/>';
     h += '</linearGradient></defs>';
-    h += '<line x1="' + X0 + '" x2="' + X1 + '" y1="40" y2="40" stroke="#475569" stroke-width="1" marker-start="url(#arr)" marker-end="url(#arr)"/>';
-    h += '<line x1="' + X0 + '" x2="' + X0 + '" y1="32" y2="' + (YC - SH / 2 - 24) + '" stroke="#cbd5e1" stroke-dasharray="3 3"/>';
-    h += '<line x1="' + X1 + '" x2="' + X1 + '" y1="32" y2="' + (YC - SH / 2 - 24) + '" stroke="#cbd5e1" stroke-dasharray="3 3"/>';
-    h += '<rect x="' + ((X0 + X1) / 2 - 50) + '" y="30" width="100" height="20" rx="4" fill="white"/>';
-    h += '<text x="' + ((X0 + X1) / 2) + '" y="44" text-anchor="middle" font-size="14.5" font-weight="600" fill="#0f172a">L = 5 mm</text>';
-    h += '<rect x="' + (X0 - 18) + '" y="' + (YC - SH / 2 - 8) + '" width="18" height="' + (SH + 16) + '" fill="url(#hatch)"/>';
-    h += '<line x1="' + X0 + '" x2="' + X0 + '" y1="' + (YC - SH / 2 - 8) + '" y2="' + (YC + SH / 2 + 8) + '" stroke="#475569" stroke-width="1.5"/>';
-    h += '<text x="22" y="' + (YC - 12) + '" font-size="11.5" fill="#64748b">x = 0</text>';
-    h += '<text x="22" y="' + (YC + 5) + '" font-size="13.5" font-weight="600" fill="#0f172a">Adiabatic</text>';
-    h += '<text x="22" y="' + (YC + 22) + '" font-size="11.5" fill="#475569" font-family="IBM Plex Mono, monospace">dT/dx = 0</text>';
-    h += '<text x="698" y="' + (YC - 12) + '" text-anchor="end" font-size="11.5" fill="#64748b">x = L</text>';
-    h += '<text x="698" y="' + (YC + 5) + '" text-anchor="end" font-size="13.5" font-weight="600" fill="#0f172a">Fixed temperature</text>';
-    h += '<text x="698" y="' + (YC + 22) + '" text-anchor="end" font-size="11.5" fill="#475569" font-family="IBM Plex Mono, monospace">T₆ = 250 °C</text>';
-    h += '<rect x="' + X0 + '" y="' + (YC - SH / 2) + '" width="' + (X1 - X0) + '" height="' + SH + '" rx="3" fill="url(#slabgrad)" stroke="#64748b" stroke-width="1.2"/>';
-    h += '<line x1="' + X0 + '" x2="' + X1 + '" y1="' + YC + '" y2="' + YC + '" stroke="#334155" stroke-width="1.4"/>';
+    h += '<line class="s-line" x1="' + X0 + '" x2="' + X1 + '" y1="34" y2="34" stroke-width="1" marker-start="url(#arr)" marker-end="url(#arr)"/>';
+    h += '<rect class="s-bg" x="' + ((X0 + X1) / 2 - 46) + '" y="24" width="92" height="20" rx="4"/><text class="s-ink" x="' + ((X0 + X1) / 2) + '" y="38" text-anchor="middle" font-size="14" font-weight="500">L = 5 mm</text>';
+    h += '<rect x="' + (X0 - 18) + '" y="' + (YC - SH / 2 - 8) + '" width="18" height="' + (SH + 16) + '" fill="url(#hatch)"/><line class="s-edge" x1="' + X0 + '" x2="' + X0 + '" y1="' + (YC - SH / 2 - 8) + '" y2="' + (YC + SH / 2 + 8) + '" stroke-width="1.5"/>';
+    h += '<text class="s-muted" x="16" y="' + (YC - 12) + '" font-size="11.5">x = 0</text><text class="s-ink" x="16" y="' + (YC + 5) + '" font-size="13.5" font-weight="500">Adiabatic</text><text class="s-ink2" x="16" y="' + (YC + 22) + '" font-size="11.5" font-family="IBM Plex Mono, monospace">dT/dx = 0</text>';
+    h += '<text class="s-muted" x="704" y="' + (YC - 12) + '" text-anchor="end" font-size="11.5">x = L</text><text class="s-ink" x="704" y="' + (YC + 5) + '" text-anchor="end" font-size="13.5" font-weight="500">Fixed T</text><text class="s-ink2" x="704" y="' + (YC + 22) + '" text-anchor="end" font-size="11.5" font-family="IBM Plex Mono, monospace">T₆ = 250 °C</text>';
+    h += '<rect x="' + X0 + '" y="' + (YC - SH / 2) + '" width="' + (X1 - X0) + '" height="' + SH + '" rx="6" fill="url(#sg)" class="s-edge" stroke-width="1"/>';
     for (i = 0; i < N; i++) {
-      h += '<circle id="nd' + i + '" cx="' + xs[i] + '" cy="' + YC + '" r="5" fill="#cde2fb" stroke="#0f172a" stroke-width="1.2"/>';
-      h += '<text x="' + xs[i] + '" y="' + (YC + SH / 2 + 18) + '" text-anchor="middle" font-size="13.5" font-weight="600" fill="#0f172a" font-family="IBM Plex Mono, monospace">T<tspan font-size="9" dy="3">' + (i + 1) + '</tspan></text>';
-      h += '<text x="' + xs[i] + '" y="' + (YC + SH / 2 + 35) + '" text-anchor="middle" font-size="11.5" fill="#64748b" style="font-variant-numeric:tabular-nums">' + i + ' mm</text>';
-      h += '<text id="tt' + i + '" x="' + xs[i] + '" y="' + (YC - SH / 2 - 10) + '" text-anchor="middle" font-size="12" font-weight="600" fill="#1e293b" style="font-variant-numeric:tabular-nums">30</text>';
+      h += '<circle id="nd' + i + '" class="s-node" cx="' + xs[i] + '" cy="' + YC + '" r="5.5" fill="#cde2fb" stroke-width="1.3"/>';
+      h += '<text class="s-ink" x="' + xs[i] + '" y="' + (YC + SH / 2 + 20) + '" text-anchor="middle" font-size="13.5" font-weight="500" font-family="IBM Plex Mono, monospace">T<tspan font-size="9" dy="3">' + (i + 1) + '</tspan></text>';
+      h += '<text class="s-muted" x="' + xs[i] + '" y="' + (YC + SH / 2 + 37) + '" text-anchor="middle" font-size="11">' + i + ' mm</text>';
+      h += '<text id="tt' + i + '" class="s-ink" x="' + xs[i] + '" y="' + (YC - SH / 2 - 10) + '" text-anchor="middle" font-size="12.5" font-weight="500" font-family="IBM Plex Mono, monospace">30</text>';
     }
-    h += '<text x="' + ((X0 + X1) / 2) + '" y="' + (YC + SH / 2 + 54) + '" text-anchor="middle" font-size="11" fill="#94a3b8">N = 6 nodes · Δx = 1 mm · temperatures in °C</text>';
     slab.innerHTML = h;
 
-    /* profile chart */
-    var PW = 360, px0 = 44, px1 = 348, py0 = 20, py1 = 138, TMAX = 260;
-    var px = function (x) { return px0 + (px1 - px0) * x / L; };
-    var py = function (T) { return py1 - (py1 - py0) * T / TMAX; };
-    var g = '<text x="' + px0 + '" y="11" font-size="10" fill="#64748b">T (°C)</text>';
-    for (i = 0; i <= 5; i++) { var T = i * 50; g += '<line x1="' + px0 + '" x2="' + px1 + '" y1="' + py(T) + '" y2="' + py(T) + '" stroke="#e5e7eb"/><text x="' + (px0 - 6) + '" y="' + (py(T) + 3.5) + '" text-anchor="end" font-size="10" fill="#475569" style="font-variant-numeric:tabular-nums">' + T + '</text>'; }
-    for (i = 0; i <= 5; i++) { var xx = px(i * 0.001); g += '<line x1="' + xx + '" x2="' + xx + '" y1="' + py0 + '" y2="' + py1 + '" stroke="#f1f5f9"/><text x="' + xx + '" y="' + (py1 + 14) + '" text-anchor="middle" font-size="10" fill="#475569">' + i + '</text>'; }
-    g += '<line x1="' + px0 + '" x2="' + px1 + '" y1="' + py1 + '" y2="' + py1 + '" stroke="#94a3b8"/><line x1="' + px0 + '" x2="' + px0 + '" y1="' + py0 + '" y2="' + py1 + '" stroke="#94a3b8"/>';
-    g += '<text x="' + ((px0 + px1) / 2) + '" y="' + (py1 + 30) + '" text-anchor="middle" font-size="10" fill="#64748b">x (mm)</text>';
-    g += '<line x1="' + px0 + '" x2="' + px1 + '" y1="' + py(T0) + '" y2="' + py(T0) + '" stroke="#64748b" stroke-dasharray="4 3" stroke-width="1"/><text x="' + (px1 - 2) + '" y="' + (py(T0) - 4) + '" text-anchor="end" font-size="9.5" fill="#64748b">initial T⁰ = 30</text>';
-    for (i = 3; i >= 0; i--) g += '<path id="tr' + i + '" d="" fill="none" stroke="#2a78d6" stroke-width="1.2" opacity="' + (0.28 - i * 0.06) + '"/>';
-    g += '<path id="area" d="" fill="#2a78d6" opacity="0.1"/><path id="line" d="" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round"/>';
-    for (i = 0; i < N; i++) g += '<circle id="pd' + i + '" cx="' + px(i * dx) + '" cy="' + py(T0) + '" r="3.2" fill="#cde2fb" stroke="#1c5cab" stroke-width="1.2"/>';
-    g += '<text id="plabel" x="' + px1 + '" y="11" text-anchor="end" font-size="10.5" font-weight="600" fill="#1c5cab" style="font-variant-numeric:tabular-nums"></text>';
+    var px0 = 40, px1 = 350, py0 = 18, py1 = 140, TMAX = 260;
+    var px = function (x) { return px0 + (px1 - px0) * x / L; }, py = function (T) { return py1 - (py1 - py0) * T / TMAX; };
+    var g = '<text class="s-muted" x="' + px0 + '" y="10" font-size="10">T (°C)</text>';
+    for (i = 0; i <= 5; i++) { var tv = i * 50; g += '<line class="s-grid" x1="' + px0 + '" x2="' + px1 + '" y1="' + py(tv) + '" y2="' + py(tv) + '"/><text class="s-muted" x="' + (px0 - 6) + '" y="' + (py(tv) + 3.5) + '" text-anchor="end" font-size="10" font-family="IBM Plex Mono, monospace">' + tv + '</text>'; }
+    for (i = 0; i <= 5; i++) g += '<text class="s-muted" x="' + px(i * 0.001) + '" y="' + (py1 + 14) + '" text-anchor="middle" font-size="10" font-family="IBM Plex Mono, monospace">' + i + '</text>';
+    g += '<text class="s-muted" x="' + ((px0 + px1) / 2) + '" y="' + (py1 + 30) + '" text-anchor="middle" font-size="10">x (mm)</text>';
+    for (i = 3; i >= 0; i--) g += '<path id="tr' + i + '" fill="none" class="s-gold" stroke-width="1.2" opacity="' + (0.4 - i * 0.08).toFixed(2) + '"/>';
+    g += '<defs><linearGradient id="pf" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#eb6834" stop-opacity=".28"/><stop offset="1" stop-color="#d4a12f" stop-opacity="0"/></linearGradient></defs>';
+    g += '<path id="area" fill="url(#pf)"/><path id="line" fill="none" stroke="#eb6834" stroke-width="2" stroke-linejoin="round"/>';
+    for (i = 0; i < N; i++) g += '<circle id="pd' + i + '" class="s-node" cx="' + px(i * dx) + '" cy="' + py(T0) + '" r="3.4" fill="#cde2fb" stroke-width="1"/>';
     prof.innerHTML = g;
 
     var stops = [], nodes = [], temps = [], dots = [];
     for (i = 0; i < N; i++) { stops.push($('#st' + i)); nodes.push($('#nd' + i)); temps.push($('#tt' + i)); dots.push($('#pd' + i)); }
-    var trails = [$('#tr0'), $('#tr1'), $('#tr2'), $('#tr3')], area = $('#area'), line = $('#line'), plabel = $('#plabel');
-    var roStep = $('#ro-step'), roTime = $('#ro-time'), range = $('#demo-step');
+    var trails = [$('#tr0'), $('#tr1'), $('#tr2'), $('#tr3')], area = $('#area'), line = $('#line');
+    var roStep = $('#ro-step'), roTime = $('#ro-time'), range = $('#demo-step'), cur = 1;
     var pathOf = function (T) { var d = ''; for (var q = 0; q < N; q++) d += (q ? ' L' : 'M') + px(q * dx).toFixed(1) + ' ' + py(T[q]).toFixed(1); return d; };
-    var cur = 1;
-
     function show(n) {
-      cur = n;
-      var T = frames[n];
+      cur = n; var T = frames[n];
       for (var q = 0; q < N; q++) {
-        var c = heatColor((T[q] - T0) / (TR - T0));
-        stops[q].setAttribute('stop-color', c);
-        nodes[q].setAttribute('fill', c);
-        temps[q].textContent = fix2(T[q]);
-        dots[q].setAttribute('cy', py(T[q]).toFixed(1));
-        dots[q].setAttribute('fill', c);
+        var c = slabColor((T[q] - T0) / (TR - T0));
+        stops[q].setAttribute('stop-color', c); nodes[q].setAttribute('fill', c); dots[q].setAttribute('fill', c);
+        temps[q].textContent = fix2(T[q]); dots[q].setAttribute('cy', py(T[q]).toFixed(1));
       }
-      var d = pathOf(T);
-      line.setAttribute('d', d);
+      var d = pathOf(T); line.setAttribute('d', d);
       area.setAttribute('d', d + ' L' + px(L).toFixed(1) + ' ' + py1 + ' L' + px0 + ' ' + py1 + ' Z');
       for (var j = 0; j < 4; j++) { var m = n - (j + 1) * 2; trails[j].setAttribute('d', m >= 0 ? pathOf(frames[m]) : ''); }
-      plabel.textContent = 'n = ' + n + ', t = ' + fix2(n * dt) + ' s';
-      roStep.textContent = n + ' / ' + STEPS;
-      roTime.textContent = fix2(n * dt);
-      range.value = n;
+      roStep.textContent = n + ' / ' + STEPS; roTime.textContent = fix2(n * dt); range.value = n;
     }
-
-    var playing = false, timer = null, visible = true;
-    var playBtn = $('#demo-play'), playIcon = $('#demo-play-icon'), playLabel = $('#demo-play-label');
-    function setPlaying(p) {
-      playing = p;
-      playBtn.setAttribute('aria-pressed', p ? 'true' : 'false');
-      playIcon.setAttribute('href', p ? '#i-pause' : '#i-play');
-      playLabel.textContent = p ? 'Pause' : 'Play';
-      schedule();
-    }
-    function schedule() {
-      clearTimeout(timer);
-      if (!playing || !visible || document.hidden) return;
-      timer = setTimeout(function () { if (cur >= STEPS) show(0); else show(cur + 1); schedule(); }, cur >= STEPS ? 1600 : 150);
-    }
-    playBtn.addEventListener('click', function () { setPlaying(!playing); });
-    $('#demo-next').addEventListener('click', function () { setPlaying(false); show(cur >= STEPS ? 0 : cur + 1); });
+    var playing = false, timer = null, visible = false, userPaused = false, playBtn = $('#demo-play'), playIcon = $('#demo-play-icon'), playLabel = $('#demo-play-label');
+    function setPlaying(p) { playing = p; playBtn.setAttribute('aria-pressed', p ? 'true' : 'false'); playIcon.setAttribute('href', p ? '#i-pause' : '#i-play'); playLabel.textContent = p ? 'Pause' : 'Play'; schedule(); }
+    function schedule() { clearTimeout(timer); if (!playing || !visible || document.hidden) return; timer = setTimeout(function () { show(cur >= STEPS ? 0 : cur + 1); schedule(); }, cur >= STEPS ? 1600 : 160); }
+    playBtn.addEventListener('click', function () { userPaused = playing; setPlaying(!playing); });
+    $('#demo-next').addEventListener('click', function () { userPaused = true; setPlaying(false); show(cur >= STEPS ? 0 : cur + 1); });
     $('#demo-reset').addEventListener('click', function () { show(0); schedule(); });
-    range.addEventListener('input', function () { setPlaying(false); show(Number(range.value)); });
+    range.addEventListener('input', function () { userPaused = true; setPlaying(false); show(Number(range.value)); });
     document.addEventListener('visibilitychange', schedule);
-    if ('IntersectionObserver' in window) {
-      new IntersectionObserver(function (es) { visible = es[0].isIntersecting; schedule(); }, { threshold: 0.05 }).observe($('#demo'));
-    }
     show(1);
-    if (!reduced) setTimeout(function () { setPlaying(true); }, 1200);
+    onVisible($('#demo'), function (v) { visible = v; if (v && !playing && !userPaused && !reduced) setPlaying(true); else schedule(); }, { threshold: 0.3 });
   }
 
-  /* ---------------- method: Gaussian elimination walkthrough ---------------- */
+  /* ---------- elimination walkthrough ---------- */
   function walkthrough() {
-    var L = 0.5, N = 5, k = 1, TL = 373, q = 1000, dx = L / (N - 1);
-    var A = [], b = [], i;
+    var N = 5, dx = 0.125, A = [], b = [], i;
     for (i = 0; i < N; i++) {
       var row = new Array(N).fill(0);
-      if (i === 0) { row[0] = 1; b.push(TL); }
-      else if (i === N - 1) { row[N - 2] = -1; row[N - 1] = 1; b.push(q * dx / k); }
+      if (i === 0) { row[0] = 1; b.push(373); }
+      else if (i === N - 1) { row[N - 2] = -1; row[N - 1] = 1; b.push(1000 * dx); }
       else { row[i - 1] = -1; row[i] = 2; row[i + 1] = -1; b.push(0); }
       A.push(row);
     }
     var r = eliminate(A, b), S = r.steps.length, total = S + 2, idx = 0;
-    var badge = $('#algo-badge'), title = $('#algo-title'), swap = $('#algo-swap'), ops = $('#algo-ops'), mat = $('#algo-matrix'), count = $('#algo-count'), dots = $('#algo-dots');
-    var prev = $('#algo-prev'), next = $('#algo-next'), card = $('#algo');
-    if (!card) return;
-
+    var badge = $('#algo-badge'), title = $('#algo-title'), ops = $('#algo-ops'), mat = $('#algo-matrix'), count = $('#algo-count'), prog = $('#algo-prog'), prev = $('#algo-prev'), next = $('#algo-next'), card = $('#algo');
     function matrixHTML(M, hl, caption) {
-      var n = N, h = '<div class="mx-wrap"><table class="mx"><thead><tr><th></th><th class="bk"></th>', j;
-      for (j = 0; j < n; j++) h += '<th>' + (j + 1) + '</th>';
+      var h = '<table class="mx"><thead><tr><th></th><th class="bk"></th>', j;
+      for (j = 0; j < N; j++) h += '<th>' + (j + 1) + '</th>';
       h += '<th class="sep"></th><th>b</th><th class="bk"></th></tr></thead><tbody>';
-      for (i = 0; i < n; i++) {
+      for (i = 0; i < N; i++) {
         var cls = [];
         if (hl && hl.pivotRow === i) cls.push('prow');
         if (hl && hl.changed && hl.changed.indexOf(i) >= 0) cls.push('chg');
-        var edge = (i === 0 ? ' t' : '') + (i === n - 1 ? ' b' : '');
+        var edge = (i === 0 ? ' t' : '') + (i === N - 1 ? ' b' : '');
         h += '<tr class="' + cls.join(' ') + '"><td class="rl">' + (i + 1) + '</td><td class="bk bl' + edge + '"></td>';
-        for (j = 0; j < n; j++) {
-          var v = M[i][j], isP = hl && hl.pivot && hl.pivot[0] === i && hl.pivot[1] === j;
-          h += '<td class="c' + (Math.abs(v) < 1e-12 ? ' z' : '') + (isP ? ' piv' : '') + '">' + fmt(v, 5) + '</td>';
-        }
-        h += '<td class="sep"></td><td class="c">' + fmt(M[i][n], 5) + '</td><td class="bk br' + edge + '"></td></tr>';
+        for (j = 0; j < N; j++) { var v = M[i][j], isP = hl && hl.pivot && hl.pivot[0] === i && hl.pivot[1] === j; h += '<td class="c' + (Math.abs(v) < 1e-12 ? ' z' : '') + (isP ? ' piv' : '') + '">' + fmt(v, 5) + '</td>'; }
+        h += '<td class="sep"></td><td class="c">' + fmt(M[i][N], 5) + '</td><td class="bk br' + edge + '"></td></tr>';
       }
-      return h + '</tbody></table>' + (caption ? '<div class="mx-cap">' + caption + '</div>' : '') + '</div>';
+      return h + '</tbody></table>' + (caption ? '<div class="mx-cap">' + caption + '</div>' : '');
     }
-
     function render() {
-      swap.hidden = true;
       badge.className = 'step-badge';
       if (idx === 0) {
-        badge.textContent = 'STEP 0';
-        title.textContent = 'Initial augmented matrix [A | b]';
-        ops.innerHTML = '<div class="ops-l">How the rows are built</div><ul class="rows-how">' +
-          '<li><b>Row 1, temperature</b><span class="tex" data-tex="T_1 = 373\\ \\mathrm{K} \\;\\Rightarrow\\; [\\,1\\;0\\;0\\;0\\;0 \\mid 373\\,]">T₁ = 373 K → [1 0 0 0 0 | 373]</span></li>' +
-          '<li><b>Rows 2 to 4, interior</b><span class="tex" data-tex="-T_{i-1} + 2T_i - T_{i+1} = 0">−Tᵢ₋₁ + 2Tᵢ − Tᵢ₊₁ = 0</span> since q‴ = 0</li>' +
-          '<li><b>Row 5, heat flux in</b><span class="tex" data-tex="-T_4 + T_5 = \\frac{q\'\'\\,\\Delta x}{k} = 125">−T₄ + T₅ = q″Δx/k = 125</span></li></ul>';
+        badge.textContent = 'STEP 0'; title.textContent = 'Initial augmented matrix [A | b]';
+        ops.innerHTML = '<div class="ops-l">How the rows are built</div><ul class="ops">' +
+          '<li><b>Row 1, temperature</b><span class="tex" data-tex="T_1 = 373\\ \\mathrm{K}">T₁ = 373 K</span></li>' +
+          '<li><b>Rows 2 to 4, interior</b><span class="tex" data-tex="-T_{i-1} + 2T_i - T_{i+1} = 0">−Tᵢ₋₁ + 2Tᵢ − Tᵢ₊₁ = 0</span></li>' +
+          '<li><b>Row 5, heat flux in</b><span class="tex" data-tex="-T_4 + T_5 = q^{\\prime\\prime}\\Delta x / k = 125">−T₄ + T₅ = 125</span></li></ul>';
         mat.innerHTML = matrixHTML(r.initial, null, 'Tridiagonal: only the bands next to the diagonal are non-zero');
       } else if (idx <= S) {
         var st = r.steps[idx - 1], kk = st.pivotCol - 1;
         badge.textContent = 'STEP ' + st.step;
-        title.innerHTML = 'Pivot <span class="tex" data-tex="a_{' + st.pivotRow + st.pivotCol + '} = ' + fmt(st.pivotValue, 5, true) + '">a' + st.pivotRow + st.pivotCol + ' = ' + fmt(st.pivotValue, 5) + '</span>, column ' + st.pivotCol + ' cleared below it';
-        if (st.swapped) { swap.textContent = 'Rows ' + st.pivotRow + ' ↔ ' + st.swapWith + ' swapped (partial pivoting)'; swap.hidden = false; }
-        if (st.operations.length === 0) {
-          ops.innerHTML = '<div class="ops-l">Operations</div><p class="ops-none">All entries below the pivot are already zero, so no row operation is needed.</p>';
-        } else {
-          ops.innerHTML = '<div class="ops-l">Operations</div><ul class="ops">' + st.operations.map(function (o) {
-            return '<li><span class="tex" data-tex="' + o.tex + '">' + o.plain + '</span><div class="ops-f mono">factor = a<sub>' + o.target + st.pivotCol + '</sub> / a<sub>' + st.pivotRow + st.pivotCol + '</sub> = ' + fmt(o.factor, 5) + '</div></li>';
-          }).join('') + '</ul><p class="ops-none" style="margin-top:10px">Rows with a zero below the pivot are skipped. Only the next row needs work in a tridiagonal system.</p>';
-        }
-        mat.innerHTML = matrixHTML(st.matrix, { pivot: [kk, kk], pivotRow: kk, changed: st.operations.map(function (o) { return o.target - 1; }) }, 'Pivot highlighted, changed rows tinted');
+        title.innerHTML = 'Pivot <span class="tex" data-tex="a_{' + st.pivotRow + st.pivotCol + '} = ' + fmt(st.pivotValue, 5, true) + '">a' + st.pivotRow + st.pivotCol + ' = ' + fmt(st.pivotValue, 5) + '</span>, clear column ' + st.pivotCol;
+        ops.innerHTML = '<div class="ops-l">Operations</div><ul class="ops">' + st.operations.map(function (o) {
+          return '<li><span class="tex" data-tex="' + o.tex + '">' + o.plain + '</span><div class="ops-f">factor = a' + o.target + st.pivotCol + ' / a' + st.pivotRow + st.pivotCol + ' = ' + fmt(o.factor, 5) + '</div></li>';
+        }).join('') + '</ul><p class="ops-note">Rows with a zero below the pivot are skipped.</p>';
+        mat.innerHTML = matrixHTML(st.matrix, { pivot: [kk, kk], pivotRow: kk, changed: st.operations.map(function (o) { return o.target - 1; }) }, 'Pivot outlined, changed row tinted');
       } else {
-        badge.textContent = 'BACK SUBSTITUTION';
-        badge.className = 'step-badge back';
-        title.textContent = 'Upper-triangular system, solved from the last row up';
+        badge.textContent = 'BACK SUBSTITUTION'; badge.className = 'step-badge back';
+        title.textContent = 'Solve from the last row up';
         ops.innerHTML = '<div class="ops-l">Lines</div><ul class="ops">' + r.back.map(function (l) {
-          var num = fmt(l.b, 5, true), plain = fmt(l.b);
-          l.terms.forEach(function (t) { num += ' - (' + fmt(t.a, 5, true) + ')(' + fmt(t.x, 5, true) + ')'; plain += ' − (' + fmt(t.a) + ')(' + fmt(t.x) + ')'; });
-          var tex = 'T_{' + l.i + '} = \\frac{' + num + '}{' + fmt(l.diag, 5, true) + '} = ' + fmt(l.value, 5, true);
-          return '<li><span class="tex" data-tex="' + tex + '">T' + l.i + ' = (' + plain + ') / ' + fmt(l.diag) + ' = ' + fmt(l.value) + '</span></li>';
+          var num = fmt(l.b, 5, true);
+          l.terms.forEach(function (t) { num += ' - (' + fmt(t.a, 5, true) + ')(' + fmt(t.x, 5, true) + ')'; });
+          return '<li><span class="tex" data-tex="T_{' + l.i + '} = \\frac{' + num + '}{' + fmt(l.diag, 5, true) + '} = ' + fmt(l.value, 5, true) + '">T' + l.i + ' = ' + fmt(l.value) + '</span></li>';
         }).join('') + '</ul>';
-        var last = r.steps[S - 1].matrix;
-        mat.innerHTML = matrixHTML(last, null, 'Upper-triangular [U | c]') +
-          '<div class="solution"><span class="mono">T = {' + r.solution.map(function (v) { return fmt(v, 5); }).join(', ') + '} K</span>' +
-          '<span class="badge badge-success"><svg class="ic" style="width:12px;height:12px"><use href="#i-check"/></svg> max|A·T − b| = ' + fmt(r.residual, 2) + '</span>' +
-          '<span class="badge badge-neutral">linear profile, 125 K per interval</span></div>';
+        mat.innerHTML = matrixHTML(r.steps[S - 1].matrix, null, 'Upper-triangular [U | c]') +
+          '<div class="sol"><span class="mono">T = {' + r.solution.map(function (v) { return fmt(v, 5); }).join(', ') + '} K</span><span class="pbadge">max|A·T − b| = ' + fmt(r.residual, 2) + '</span></div>';
       }
-      count.textContent = idx <= S ? 'Step ' + idx + ' of ' + S : 'Solved';
-      prev.disabled = idx === 0;
-      next.disabled = idx === total - 1;
-      Array.prototype.forEach.call(dots.children, function (d, n) { if (n === idx) d.setAttribute('aria-current', 'step'); else d.removeAttribute('aria-current'); });
+      count.textContent = idx <= S ? 'step ' + idx + ' / ' + S : 'solved';
+      prog.style.width = (100 * idx / (total - 1)) + '%';
+      prev.disabled = idx === 0; next.disabled = idx === total - 1;
       renderTex(card);
-    }
-    for (i = 0; i < total; i++) {
-      var d = document.createElement('button');
-      d.type = 'button';
-      d.setAttribute('aria-label', i === 0 ? 'Initial matrix' : i <= S ? 'Step ' + i : 'Back substitution');
-      d.addEventListener('click', (function (n) { return function () { idx = n; render(); }; })(i));
-      dots.appendChild(d);
     }
     prev.addEventListener('click', function () { if (idx > 0) { idx--; render(); } });
     next.addEventListener('click', function () { if (idx < total - 1) { idx++; render(); } });
@@ -891,10 +1095,72 @@ h1 { font-size: clamp(34px, 4.6vw, 56px); line-height: 1.05; letter-spacing: -.0
     render();
   }
 
+  /* ---------- custom source: live LaTeX preview ---------- */
+  function exprDemo() {
+    var input = $('#expr-in'), prev = $('#expr-prev'), status = $('#expr-status'), presets = $$('.preset');
+    function draw() {
+      var tex = input.value.trim();
+      presets.forEach(function (p) { p.setAttribute('aria-pressed', p.getAttribute('data-src') === input.value ? 'true' : 'false'); });
+      if (!window.katex) return;
+      if (!tex) { prev.textContent = 'Type an expression'; status.className = 'expr-status'; return; }
+      try {
+        katex.render("q'''(\\mathbf{x}) = " + tex, prev, { throwOnError: true, displayMode: true, output: 'html' });
+        status.textContent = 'Rendered live, the same way the solver’s editor shows it.'; status.className = 'expr-status';
+      } catch (e) {
+        status.textContent = 'Not valid LaTeX yet: ' + String(e.message || e).replace(/^KaTeX parse error: /, ''); status.className = 'expr-status bad';
+      }
+    }
+    input.addEventListener('input', draw);
+    presets.forEach(function (p) { p.addEventListener('click', function () { input.value = p.getAttribute('data-src'); draw(); input.focus(); }); });
+    draw();
+    return draw;
+  }
+
+  /* ---------- hero grid: fading gold squares plus a highlight under the pointer ---------- */
+  function heroGrid() {
+    var svg = $('#grid-bg'), group = $('#grid-sqs'), hov = $('#grid-hov'), shell = $('#hero-shell');
+    if (!svg) return;
+    var S = 44, NS = 'http://www.w3.org/2000/svg', cols = 0, rows = 0, squares = [];
+    function place(r) {
+      // random cell in the central band, where the mask leaves the grid visible
+      var cx = Math.floor(cols * (0.12 + Math.random() * 0.76)), cy = Math.floor(rows * (0.06 + Math.random() * 0.7));
+      r.setAttribute('x', cx * S); r.setAttribute('y', cy * S);
+    }
+    function build() {
+      var b = svg.getBoundingClientRect();
+      cols = Math.ceil(b.width / S); rows = Math.ceil(b.height / S);
+      var want = Math.min(34, Math.max(12, Math.round(cols * rows / 22)));
+      while (squares.length < want) {
+        var r = document.createElementNS(NS, 'rect');
+        r.setAttribute('class', 'sq'); r.setAttribute('width', S - 1); r.setAttribute('height', S - 1);
+        r.style.setProperty('--dur', (3.2 + Math.random() * 2.6).toFixed(2) + 's');
+        r.style.setProperty('--delay', (-Math.random() * 6).toFixed(2) + 's');
+        r.addEventListener('animationiteration', function (e) { place(e.target); });
+        group.appendChild(r); squares.push(r);
+      }
+      while (squares.length > want) group.removeChild(squares.pop());
+      squares.forEach(place);
+    }
+    build();
+    var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(build, 150); });
+    shell.addEventListener('pointermove', function (e) {
+      var b = svg.getBoundingClientRect();
+      var cx = Math.floor((e.clientX - b.left) / S), cy = Math.floor((e.clientY - b.top) / S);
+      hov.setAttribute('x', cx * S); hov.setAttribute('y', cy * S); hov.classList.add('on');
+    });
+    shell.addEventListener('pointerleave', function () { hov.classList.remove('on'); });
+  }
+
   function start() {
+    var redraw = null;
+    [chrome, heroGrid, slabDemo, walkthrough].forEach(function (fn) { try { fn(); } catch (e) { if (window.console) console.error(e); } });
+    try { redraw = exprDemo(); } catch (e) { console.error(e); }
+    try { heatField($('#field'), $('.band')); } catch (e) { console.error(e); }
     renderTex(document);
-    try { heroDemo(); } catch (e) { if (window.console) console.error(e); }
-    try { walkthrough(); } catch (e) { if (window.console) console.error(e); }
+    if (!window.katex) {
+      var k = document.querySelector('script[src*="katex"]');
+      if (k) k.addEventListener('load', function () { renderTex(document); if (redraw) redraw(); });
+    }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

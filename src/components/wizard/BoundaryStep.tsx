@@ -88,7 +88,7 @@ export function BoundaryStep({ sim }: { sim: Simulation }) {
         A <b>positive heat flux q''</b> always means heat <b>entering</b> the slab. With Fourier's law q = −k dT/dx this gives{' '}
         <Tex math={String.raw`-k\,\frac{dT}{dx}\Big|_{0} = q''_{in}`} /> at the left face and <Tex math={String.raw`k\,\frac{dT}{dx}\Big|_{L} = q''_{in}`} /> at the right face.
       </Callout>
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <BoundaryCard sim={sim} side="left" />
         <BoundaryCard sim={sim} side="right" />
       </div>

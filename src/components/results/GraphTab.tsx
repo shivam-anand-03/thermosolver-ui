@@ -38,7 +38,7 @@ export function GraphTab({ result, temp, xUnit, xScale, example }: { result: Sim
     )
   }
   const ref = example?.reference && example.reference.values.length === result.solution.length ? example.reference : null
-  const series = [{ key: 'T', name: 'ThermoSolve (computed)', values: result.solution, color: SERIES[0] }]
+  const series = [{ key: 'T', name: 'CFD Solver (computed)', values: result.solution, color: SERIES[0] }]
   if (ref) series.push({ key: 'ref', name: ref.label, values: ref.values, color: CHART.reference, dashed: true } as (typeof series)[number])
   return (
     <Card>

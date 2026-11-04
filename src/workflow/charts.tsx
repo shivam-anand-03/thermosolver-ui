@@ -2,6 +2,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { fmt } from '@/lib/format'
 import { niceAxis } from '@/lib/chart'
 import { CHART } from '@/lib/palette'
+import { cssVar, useTheme } from '@/lib/theme'
 
 export interface LineSeries {
   key: string
@@ -77,12 +78,12 @@ export function XYChart({
             {...axisProps}
           />
           <Tooltip
-            cursor={{ stroke: '#94a3b8', strokeDasharray: '3 3' }}
+            cursor={{ stroke: 'var(--chart-axis)', strokeDasharray: '3 3' }}
             content={({ active, payload }) => {
               if (!active || !payload?.length) return null
               const row = payload[0].payload as Record<string, number>
               return (
-                <div className="rounded border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg">
+                <div className="rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-lg">
                   <div className="text-slate-500">
                     {xLabel}: <span className="font-mono text-slate-800">{xFormat(row[xKey])}</span>
                   </div>
@@ -106,8 +107,8 @@ export function XYChart({
               stroke={s.color}
               strokeWidth={2}
               strokeDasharray={s.dashed ? '5 4' : undefined}
-              dot={s.markers && !dense ? { r: 4, fill: s.color, stroke: 'white', strokeWidth: 2 } : false}
-              activeDot={{ r: 5, stroke: 'white', strokeWidth: 2 }}
+              dot={s.markers && !dense ? { r: 4, fill: s.color, stroke: 'var(--ui-surface)', strokeWidth: 2 } : false}
+              activeDot={{ r: 5, stroke: 'var(--ui-surface)', strokeWidth: 2 }}
               isAnimationActive={false}
               connectNulls
             />
@@ -120,12 +121,13 @@ export function XYChart({
 
 /** Sparsity pattern of [A] drawn on a canvas. */
 export function SparsityPattern({ n, pattern, size = 260 }: { n: number; pattern: [number, number][]; size?: number }) {
+  useTheme() // redraw when the theme changes
   return (
     <canvas
       width={size * 2}
       height={size * 2}
       style={{ width: size, height: size }}
-      className="rounded-sm border border-slate-300 bg-white"
+      className="rounded-sm border border-input bg-card"
       role="img"
       aria-label={`Sparsity pattern of the ${n} by ${n} matrix`}
       ref={(c) => {
@@ -133,7 +135,7 @@ export function SparsityPattern({ n, pattern, size = 260 }: { n: number; pattern
         if (!c || !ctx) return
         ctx.clearRect(0, 0, c.width, c.height)
         const s = c.width / n
-        ctx.fillStyle = '#1f5ea8'
+        ctx.fillStyle = cssVar('--ui-accent', '#1f5ea8')
         const d = Math.max(1.5, s)
         for (const [i, j] of pattern) ctx.fillRect(j * s, i * s, d, d)
       }}

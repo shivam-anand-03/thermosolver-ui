@@ -43,11 +43,11 @@ export function DomainDiagram({ setup, className, compact = false, highlight }: 
     const xs = range(N, 41).map((i) => (cell ? x0 + ((i + 0.5) / N) * (x1 - x0) : x0 + (i / (N - 1)) * (x1 - x0)))
     return (
       <svg viewBox="0 0 400 130" className={className} role="img" aria-label="1-D domain">
-        <rect x={x0} y={42} width={x1 - x0} height={30} fill="#eef3fa" stroke="#94a3b8" />
+        <rect x={x0} y={42} width={x1 - x0} height={30} fill="var(--ui-domain)" stroke="var(--ui-faint)" />
         <line x1={x0} x2={x0} y1={34} y2={80} stroke={stroke('x_min')} strokeWidth={width('x_min')} />
         <line x1={x1} x2={x1} y1={34} y2={80} stroke={stroke('x_max')} strokeWidth={width('x_max')} />
         {xs.map((x, i) => (
-          <circle key={i} cx={x} cy={57} r={2.6} fill="#1f5ea8" />
+          <circle key={i} cx={x} cy={57} r={2.6} fill="var(--ui-accent)" />
         ))}
         {vel[0] !== 0 && <Arrow x1={170} y1={22} x2={230} y2={22} label={`u = ${fmt(vel[0], 3)} m/s`} flip={vel[0] < 0} />}
         <text x={x0} y={98} textAnchor="middle" className="fill-slate-500 text-[10px]">x = 0</text>
@@ -73,12 +73,12 @@ export function DomainDiagram({ setup, className, compact = false, highlight }: 
     const ys = range(g.ny).map((j) => (cell ? ((j + 0.5) / g.ny) * H : (j / (g.ny - 1)) * H))
     return (
       <svg viewBox={`0 0 400 ${H + 80}`} className={className} role="img" aria-label="2-D domain">
-        <rect x={ox} y={oy} width={w} height={H} fill="#eef3fa" />
+        <rect x={ox} y={oy} width={w} height={H} fill="var(--ui-domain)" />
         {xs.map((x, i) => (
-          <line key={`x${i}`} x1={ox + x} x2={ox + x} y1={oy} y2={oy + H} stroke="#c7d6ea" strokeWidth={0.7} />
+          <line key={`x${i}`} x1={ox + x} x2={ox + x} y1={oy} y2={oy + H} stroke="var(--ui-domain-grid)" strokeWidth={0.7} />
         ))}
         {ys.map((y, j) => (
-          <line key={`y${j}`} x1={ox} x2={ox + w} y1={oy + H - y} y2={oy + H - y} stroke="#c7d6ea" strokeWidth={0.7} />
+          <line key={`y${j}`} x1={ox} x2={ox + w} y1={oy + H - y} y2={oy + H - y} stroke="var(--ui-domain-grid)" strokeWidth={0.7} />
         ))}
         <line x1={ox} x2={ox} y1={oy} y2={oy + H} stroke={stroke('x_min')} strokeWidth={width('x_min')} />
         <line x1={ox + w} x2={ox + w} y1={oy} y2={oy + H} stroke={stroke('x_max')} strokeWidth={width('x_max')} />

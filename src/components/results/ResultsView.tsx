@@ -1,10 +1,13 @@
 import { BarChart3, Binary, CheckCircle2, Grid3X3, LayoutDashboard, ListChecks, Loader2, ScrollText, Table2, XCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Segmented } from '@/components/ui/segmented'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatMs, sci } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import { convertTemp, LENGTH_FACTOR, TEMP_SYMBOL } from '@/lib/units'
 import type { Example, LengthUnit, SimulationResult, TemperatureUnit } from '@/types/solver'
 import { AlgorithmTab } from './AlgorithmTab'
@@ -47,7 +50,7 @@ export function ResultsView({
   return (
     <div>
       {/* status header */}
-      <div className={`rounded-md border border-l-4 bg-white p-4 ${ok ? 'border-slate-300 border-l-emerald-600' : 'border-slate-300 border-l-red-600'}`}>
+      <Card className={cn('border-l-4 p-4', ok ? 'border-l-emerald-600' : 'border-l-red-600')}>
         <div className="flex flex-wrap items-start gap-4">
           <div className="flex items-center gap-3">
             <span className={ok ? 'text-emerald-700' : 'text-red-700'}>
@@ -55,31 +58,31 @@ export function ResultsView({
             </span>
             <div>
               <div className={`text-[15px] font-semibold ${ok ? 'text-emerald-800' : 'text-red-800'}`}>{ok ? 'Solution validated' : 'Solution failed validation'}</div>
-              <div className="text-[13px] text-slate-500">{result.summary.title}</div>
+              <div className="text-[13px] text-muted-foreground">{result.summary.title}</div>
             </div>
           </div>
           <dl className="ml-auto grid grid-cols-2 gap-x-6 gap-y-1 text-[12px] sm:grid-cols-4">
             <div>
-              <dt className="text-slate-500">Max residual</dt>
-              <dd className="font-mono text-slate-900">{sci(v.residual_max, 2)}</dd>
+              <dt className="text-muted-foreground">Max residual</dt>
+              <dd className="font-mono text-foreground">{sci(v.residual_max, 2)}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Boundary error</dt>
-              <dd className="font-mono text-slate-900">{v.boundary_error < 1e-10 ? '< 10⁻¹⁰' : sci(v.boundary_error, 2)}</dd>
+              <dt className="text-muted-foreground">Boundary error</dt>
+              <dd className="font-mono text-foreground">{v.boundary_error < 1e-10 ? '< 10⁻¹⁰' : sci(v.boundary_error, 2)}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">{transient ? 'Nodes · steps' : 'Nodes'}</dt>
-              <dd className="font-mono text-slate-900">{transient ? `${result.nodes.length} · ${result.num_steps}` : result.nodes.length}</dd>
+              <dt className="text-muted-foreground">{transient ? 'Nodes · steps' : 'Nodes'}</dt>
+              <dd className="font-mono text-foreground">{transient ? `${result.nodes.length} · ${result.num_steps}` : result.nodes.length}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Execution time</dt>
-              <dd className="font-mono text-slate-900">{formatMs(result.execution_time_ms)}</dd>
+              <dt className="text-muted-foreground">Execution time</dt>
+              <dd className="font-mono text-foreground">{formatMs(result.execution_time_ms)}</dd>
             </div>
           </dl>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-slate-100 pt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-3 border-t pt-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Display</span>
+            <span className="text-xs text-muted-foreground">Display</span>
             <Segmented
               size="sm"
               ariaLabel="Display temperature unit"
@@ -93,21 +96,21 @@ export function ResultsView({
           </div>
           <div className="flex items-center gap-2">
             <Switch id="live" checked={liveUpdate} onCheckedChange={onLiveUpdate} />
-            <Label htmlFor="live" className="text-xs font-normal text-slate-600">
+            <Label htmlFor="live" className="text-xs font-normal text-muted-foreground">
               Live update when inputs change
             </Label>
           </div>
           {refreshing && (
-            <span className="inline-flex items-center gap-1.5 text-xs text-blue-700">
+            <span className="inline-flex items-center gap-1.5 text-xs text-primary-ink">
               <Loader2 className="size-3.5 animate-spin" /> Re-solving…
             </span>
           )}
-          {!refreshing && stale && <span className="text-xs text-amber-700">Inputs changed. Results are out of date.</span>}
+          {!refreshing && stale && <Badge variant="warning">Inputs changed. Results are out of date.</Badge>}
           {displayUnit !== solveUnit && (
-            <span className="text-[11px] text-slate-500">Matrices and the algorithm stay in {TEMP_SYMBOL[solveUnit]} (the unit used to assemble the system).</span>
+            <span className="text-[11px] text-muted-foreground">Matrices and the algorithm stay in {TEMP_SYMBOL[solveUnit]} (the unit used to assemble the system).</span>
           )}
         </div>
-      </div>
+      </Card>
 
       <Tabs value={tab} onValueChange={setTab} className="mt-5">
         <TabsList>

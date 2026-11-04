@@ -30,7 +30,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<Response> {
     throw new ApiRequestError({
       success: false,
       kind: 'network',
-      error: 'Cannot reach the ThermoSolve API. Make sure the backend is running on port 8000.',
+      error: 'Cannot reach the CFD Solver API. Make sure the backend is running on port 8000.',
       details: [],
     })
   }
@@ -79,6 +79,12 @@ export async function downloadPdfReport(type: ProblemType, body: SteadyRequest |
 }
 
 // ------------------------------------------------ three-phase workflow (v2)
+
+/** PDF report for a workflow set-up (re-solved on the server). Returns the file; save it with downloadBlob. */
+export async function downloadWorkflowPdf(setup: Setup): Promise<Blob> {
+  const res = await request<Blob>('/api/v2/report/pdf', { method: 'POST', body: JSON.stringify(setup) })
+  return res.blob()
+}
 
 export async function simulateWorkflow(setup: Setup, signal?: AbortSignal): Promise<WorkflowResult> {
   const res = await request<WorkflowResult>('/api/v2/simulate', { method: 'POST', body: JSON.stringify(setup), signal })

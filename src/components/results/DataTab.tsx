@@ -2,6 +2,8 @@ import { FileSpreadsheet } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { exportCsv } from '@/lib/export'
 import { fixed, fmt, formatTime } from '@/lib/format'
 import type { SimulationResult } from '@/types/solver'
@@ -26,18 +28,18 @@ export function DataTab({ result, temp, xUnit, xScale }: { result: SimulationRes
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {transient && (
-            <select
-              aria-label="Time level"
-              value={snap}
-              onChange={(e) => setSnap(Number(e.target.value))}
-              className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs"
-            >
-              {result.times.map((t, i) => (
-                <option key={i} value={i}>
-                  t = {formatTime(t)}
-                </option>
-              ))}
-            </select>
+            <Select value={String(snap)} onValueChange={(v) => setSnap(Number(v))}>
+              <SelectTrigger aria-label="Time level" size="sm" className="w-auto min-w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {result.times.map((t, i) => (
+                  <SelectItem key={i} value={String(i)}>
+                    t = {formatTime(t)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
           <Button size="sm" variant="secondary" onClick={() => exportCsv(result)}>
             <FileSpreadsheet /> Export CSV
@@ -45,33 +47,31 @@ export function DataTab({ result, temp, xUnit, xScale }: { result: SimulationRes
         </div>
       </CardHeader>
       <CardContent>
-        <div className="scroll-thin max-h-[520px] overflow-auto rounded border border-slate-200">
-          <table className="w-full text-[13px] tabular">
-            <thead className="sticky top-0 bg-slate-50 text-left text-xs text-slate-500">
-              <tr>
-                <th className="px-3 py-2 font-medium">Node</th>
-                <th className="px-3 py-2 font-medium">x [{xUnit}]</th>
-                {transient && <th className="px-3 py-2 font-medium">T⁰ [{temp.symbol}]</th>}
-                <th className="px-3 py-2 text-right font-medium">Temperature [{temp.symbol}]</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((x, k) => {
-                const i = page * PAGE + k
-                return (
-                  <tr key={i} className="border-t border-slate-100 hover:bg-slate-50/60">
-                    <td className="px-3 py-1.5 font-medium">{i + 1}</td>
-                    <td className="px-3 py-1.5 font-mono text-slate-600">{fmt(x * xScale, 6)}</td>
-                    {transient && <td className="px-3 py-1.5 font-mono text-slate-500">{fixed(temp.conv(result.initial[i]), 2)}</td>}
-                    <td className="px-3 py-1.5 text-right font-mono font-medium text-slate-900">{fixed(temp.conv(values[i]), 4)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <Table containerClassName="max-h-[520px] overflow-auto rounded-md border" className="text-[13px] tabular">
+          <TableHeader className="sticky top-0 z-10 bg-muted">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="px-3">Node</TableHead>
+              <TableHead className="px-3">x [{xUnit}]</TableHead>
+              {transient && <TableHead className="px-3">T⁰ [{temp.symbol}]</TableHead>}
+              <TableHead className="px-3 text-right">Temperature [{temp.symbol}]</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((x, k) => {
+              const i = page * PAGE + k
+              return (
+                <TableRow key={i}>
+                  <TableCell className="px-3 font-medium">{i + 1}</TableCell>
+                  <TableCell className="px-3 font-mono text-muted-foreground">{fmt(x * xScale, 6)}</TableCell>
+                  {transient && <TableCell className="px-3 font-mono text-muted-foreground">{fixed(temp.conv(result.initial[i]), 2)}</TableCell>}
+                  <TableCell className="px-3 text-right font-mono font-medium text-foreground">{fixed(temp.conv(values[i]), 4)}</TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
         {n > PAGE && (
-          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
             <span>
               Nodes {page * PAGE + 1}–{Math.min(n, (page + 1) * PAGE)} of {n}
             </span>

@@ -1,11 +1,16 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Segmented } from '@/components/ui/segmented'
 import { fmt } from '@/lib/format'
-import { cn } from '@/lib/utils'
+import { useTheme } from '@/lib/theme'
 
 // Sequential (temperature magnitude): a single warm hue, light → dark = cold → hot.
 const SEQ = ['#fff4eb', '#fde3cf', '#fbcdab', '#f8b287', '#f39563', '#eb6834', '#d4542a', '#b54222', '#92341c', '#6e2816']
 // Diverging (signed error): blue ↔ red with a neutral grey midpoint.
 const DIV = ['#1c5cab', '#3987e5', '#86b6ef', '#cde2fb', '#f0efec', '#fbd3d0', '#f2a19b', '#e34948', '#b8302f']
+// Dark mode: lightness runs the other way so the background-like end (cold / zero error) is dark,
+// not a white block on the black page, and large values get brighter.
+const SEQ_DARK = ['#24120a', '#3d1a0e', '#5c2413', '#7d2f18', '#a03c1f', '#c54d27', '#e2632f', '#f08a55', '#f7b083', '#fdd9bd']
+const DIV_DARK = ['#a9cdf5', '#5598e7', '#2a6cc0', '#183c69', '#1a1a1a', '#5a1f1e', '#a8302e', '#e34948', '#f5a5a0']
 
 function rgb(stops: string[], t: number): [number, number, number] {
   const x = Math.min(1, Math.max(0, t)) * (stops.length - 1)
@@ -82,7 +87,8 @@ export function FieldHeatmap({
   const height = Math.round(width * aspect)
   const ex = useMemo(() => edges(xs, Lx), [xs, Lx])
   const ey = useMemo(() => edges(ys, Ly), [ys, Ly])
-  const stops = diverging ? DIV : SEQ
+  const dark = useTheme().theme === 'dark'
+  const stops = diverging ? (dark ? DIV_DARK : DIV) : dark ? SEQ_DARK : SEQ
 
   useEffect(() => {
     const el = wrap.current
@@ -163,25 +169,16 @@ export function FieldHeatmap({
     <div ref={wrap} className="w-full">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         {title ? <div className="text-[12.5px] font-medium text-slate-700">{title}</div> : <span />}
-        <div className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[11.5px]" role="radiogroup" aria-label="Shading">
-          {(
-            [
-              [true, 'Smooth'],
-              [false, 'Cells'],
-            ] as const
-          ).map(([v, label]) => (
-            <button
-              key={label}
-              type="button"
-              role="radio"
-              aria-checked={smooth === v}
-              onClick={() => setSmooth(v)}
-              className={cn('rounded px-2 py-0.5 font-medium', smooth === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800')}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented<'smooth' | 'cells'>
+          size="sm"
+          ariaLabel="Shading"
+          value={smooth ? 'smooth' : 'cells'}
+          onChange={(v) => setSmooth(v === 'smooth')}
+          options={[
+            { value: 'smooth', label: 'Smooth' },
+            { value: 'cells', label: 'Cells' },
+          ]}
+        />
       </div>
       <div className="flex items-start gap-2">
         <div className="relative" style={{ width }}>
@@ -196,7 +193,7 @@ export function FieldHeatmap({
           />
           {hover && (
             <div
-              className="pointer-events-none absolute z-10 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs whitespace-nowrap shadow-lg"
+              className="pointer-events-none absolute z-10 rounded-md border bg-popover px-2.5 py-1.5 text-xs whitespace-nowrap text-popover-foreground shadow-lg"
               style={{ left: Math.min(hover.px + 12, width - 150), top: Math.max(0, hover.py - 52) }}
             >
               <div className="text-slate-500">
@@ -222,12 +219,12 @@ export function FieldHeatmap({
               ))}
             </linearGradient>
           </defs>
-          <rect x={0.5} y={6} width={12} height={height - 12} rx={2} fill={`url(#${gradId})`} stroke="#cbd5e1" />
+          <rect x={0.5} y={6} width={12} height={height - 12} rx={2} fill={`url(#${gradId})`} stroke="var(--ui-rule)" />
           {ticks.map((v, k) => {
             const y = 6 + (1 - k / 4) * (height - 12)
             return (
               <g key={k}>
-                <line x1={13} x2={17} y1={y} y2={y} stroke="#94a3b8" />
+                <line x1={13} x2={17} y1={y} y2={y} stroke="var(--ui-faint)" />
                 <text x={20} y={y + 3.5} className="fill-slate-600 text-[10px]">
                   {fmt(v, 4)}
                 </text>

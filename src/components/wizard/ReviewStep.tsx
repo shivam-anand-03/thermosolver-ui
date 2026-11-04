@@ -1,8 +1,9 @@
-import { Loader2, Pencil, Play } from 'lucide-react'
+import { Pencil, Play } from 'lucide-react'
+import { SolvingLoader } from '@/components/svg'
 import { useEffect, useState } from 'react'
 import { SlabDiagram } from '@/components/diagram/SlabDiagram'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Simulation } from '@/hooks/useSimulation'
 import { validateInputs } from '@/lib/api'
 import { num } from '@/lib/form'
@@ -63,15 +64,17 @@ export function ReviewStep({ sim, onEdit, onRun }: { sim: Simulation; onEdit: ()
   return (
     <div>
       <StepHeader step={6} title="Review and solve" description="Check the problem definition. The inputs are validated again on the server before the system is assembled." />
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card>
-          <div className="border-b border-slate-200 px-4 py-2.5 text-[14px] font-semibold text-slate-900">Problem summary</div>
+          <CardHeader>
+            <CardTitle>Problem summary</CardTitle>
+          </CardHeader>
           <CardContent className="pt-3">
-            <dl className="divide-y divide-slate-100 text-[13px]">
+            <dl className="divide-y text-[13px]">
               {rows.map(([k, v]) => (
                 <div key={k} className="grid grid-cols-[120px_minmax(0,1fr)] gap-3 py-1.5">
-                  <dt className="text-slate-500">{k}</dt>
-                  <dd className="font-mono text-slate-900 tabular">{v}</dd>
+                  <dt className="text-muted-foreground">{k}</dt>
+                  <dd className="font-mono text-foreground tabular">{v}</dd>
                 </div>
               ))}
             </dl>
@@ -125,7 +128,7 @@ export function ReviewStep({ sim, onEdit, onRun }: { sim: Simulation; onEdit: ()
               <Pencil /> Edit
             </Button>
             <Button size="lg" className="flex-1 sm:flex-none" disabled={blocking.length > 0 || server?.valid === false || status === 'solving'} onClick={onRun}>
-              {status === 'solving' ? <Loader2 className="animate-spin" /> : <Play />}
+              {status === 'solving' ? <SolvingLoader /> : <Play />}
               {status === 'solving' ? 'Solving…' : 'Run solver'}
             </Button>
           </div>

@@ -27,17 +27,17 @@ export function resultToCsv(result: SimulationResult): string {
 }
 
 export function exportCsv(result: SimulationResult) {
-  downloadBlob(new Blob([resultToCsv(result)], { type: 'text/csv' }), `thermosolve-${result.problem_type}.csv`)
+  downloadBlob(new Blob([resultToCsv(result)], { type: 'text/csv' }), `cfd-solver-${result.problem_type}.csv`)
 }
 
 export function exportJson(request: SteadyRequest | TransientRequest, result: SimulationResult) {
   const payload = {
-    app: 'ThermoSolve',
+    app: 'CFD Solver',
     version: 1,
     exported_at: new Date().toISOString(),
     problem_type: result.problem_type,
     configuration: request,
     results: result,
   }
-  downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `thermosolve-${result.problem_type}.json`)
+  downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `cfd-solver-${result.problem_type}.json`)
 }

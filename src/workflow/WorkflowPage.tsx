@@ -8,10 +8,11 @@ import {
   Check,
   ChevronDown,
   Download,
+  FileJson,
+  FileText,
   FlaskConical,
   Grid3x3,
   Layers,
-  Loader2,
   PlayCircle,
   RotateCcw,
   ShieldCheck,
@@ -19,12 +20,18 @@ import {
   Thermometer,
   Waves,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Signature } from '@/components/layout/Signature'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { Tex } from '@/components/math/Tex'
+import { EmptyState, LogoMark, SolvingLoader, SolvingPanel } from '@/components/svg'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Hint } from '@/components/ui/tooltip'
 import { Callout } from '@/components/wizard/common'
+import { downloadWorkflowPdf } from '@/lib/api'
 import { downloadBlob } from '@/lib/export'
 import { fmt } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -79,27 +86,11 @@ const PHASES: { key: PhaseKey; name: string; title: string; steps: StepDef[] }[]
 ]
 const LAST = 11
 
-function useDismiss(open: boolean, close: () => void) {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const onDown = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && close()
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
-    document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open, close])
-  return ref
-}
-
 export function WorkflowPage() {
   const wf = useWorkflow()
   const [step, setStep] = useState(1)
-  const [exOpen, setExOpen] = useState(false)
-  const exRef = useDismiss(exOpen, () => setExOpen(false))
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
   const { setup, result } = wf
   const blocking = wf.check?.errors ?? []
 
@@ -111,6 +102,19 @@ export function WorkflowPage() {
   const run = async () => {
     const r = await wf.run()
     if (r) go(10)
+  }
+
+  const exportPdf = async () => {
+    if (!wf.resultSetup) return
+    setExporting(true)
+    setExportError(null)
+    try {
+      downloadBlob(await downloadWorkflowPdf(wf.resultSetup), 'cfd-solver-workflow-report.pdf')
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : 'Could not create the PDF report.')
+    } finally {
+      setExporting(false)
+    }
   }
 
   useEffect(() => {
@@ -154,10 +158,15 @@ export function WorkflowPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 border-b border-slate-300 bg-white">
-        <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-3 px-4 sm:px-5">
-          <a href="#" className="flex min-w-0 shrink items-center gap-3" aria-label="ThermoSolve home">
-            <img src="/logo-wide.png" alt="ThermoSolve" className="h-9 w-auto sm:h-11" width={900} height={237} />
+      <header className="sticky top-0 z-30 px-3 pt-3">
+        <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-3 rounded-full border border-slate-200 bg-white/85 pr-2 pl-4 shadow-[0_12px_32px_-16px_rgba(18,18,18,0.18)] backdrop-blur-md backdrop-saturate-150 sm:pl-5">
+          <a href="#" className="flex min-w-0 shrink items-center gap-3" aria-label="CFD Solver home">
+            <span className="flex items-center gap-2.5">
+              <LogoMark size={34} decorative className="shrink-0" />
+              <span className="text-[15px] font-bold tracking-tight whitespace-nowrap text-slate-900 max-[420px]:sr-only sm:text-[19px]">
+                CFD <span className="text-[#eb6834]">Solver</span>
+              </span>
+            </span>
             <span className="hidden border-l border-slate-300 pl-3 text-[13px] leading-tight text-slate-600 md:block">
               Preprocessor → Solver → Post-processor
               <span className="block text-[11.5px] text-slate-400">1-D · 2-D · 3-D conduction and convection</span>
@@ -167,71 +176,98 @@ export function WorkflowPage() {
             <a href="#classic" className="hidden text-[12.5px] text-slate-500 underline-offset-4 hover:text-slate-900 hover:underline lg:inline">
               Classic 1-D step-by-step
             </a>
-            <div className="relative" ref={exRef}>
-              <Button variant="secondary" size="sm" onClick={() => setExOpen((o) => !o)} aria-expanded={exOpen} aria-haspopup="menu" aria-label="Examples">
-                <BookOpen />
-                <span className="hidden sm:inline">Examples</span>
-                <ChevronDown className="opacity-60" />
-              </Button>
-              {exOpen && (
-                <div role="menu" className="scroll-thin absolute right-0 mt-2 max-h-[75vh] w-[min(92vw,420px)] overflow-auto rounded-md border border-slate-300 bg-white p-1 shadow-lg">
-                  {EXAMPLES.map((ex) => (
-                    <button
-                      key={ex.id}
-                      role="menuitem"
-                      onClick={() => {
-                        wf.load(ex.setup)
-                        setExOpen(false)
-                        go(9)
-                      }}
-                      className="flex w-full items-start gap-3 rounded px-3 py-2 text-left hover:bg-slate-100"
-                    >
-                      <FlaskConical className="mt-0.5 size-4 shrink-0 text-primary" />
-                      <span className="min-w-0">
-                        <span className="block text-[13px] font-medium text-slate-900">{ex.title}</span>
-                        <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">{ex.description}</span>
-                        <span className="mt-1 flex flex-wrap gap-1">
-                          {ex.tags.map((t) => (
-                            <Badge key={t} variant="neutral">
-                              {t}
-                            </Badge>
-                          ))}
-                        </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm" aria-label="Examples">
+                  <BookOpen />
+                  <span className="hidden sm:inline">Examples</span>
+                  <ChevronDown className="hidden opacity-60 sm:block" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="scroll-thin max-h-[75vh] w-[min(92vw,420px)]">
+                <DropdownMenuLabel>Worked examples</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {EXAMPLES.map((ex) => (
+                  <DropdownMenuItem
+                    key={ex.id}
+                    onSelect={() => {
+                      wf.load(ex.setup)
+                      go(9)
+                    }}
+                    className="items-start gap-3 px-3 py-2"
+                  >
+                    <FlaskConical className="mt-0.5 size-4 shrink-0 text-primary-ink" />
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-medium text-foreground">{ex.title}</span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">{ex.description}</span>
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        {ex.tags.map((t) => (
+                          <Badge key={t} variant="neutral">
+                            {t}
+                          </Badge>
+                        ))}
                       </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              title="Reset all inputs"
-              aria-label="Reset"
-              onClick={() => {
-                wf.load(defaultSetup())
-                go(1)
-              }}
-            >
-              <RotateCcw />
-              <span className="hidden sm:inline">Reset</span>
-            </Button>
-            <Button
-              size="sm"
-              disabled={!result}
-              title="Download set-up and results as JSON"
-              aria-label="Export"
-              onClick={() => result && downloadBlob(new Blob([JSON.stringify({ setup: wf.resultSetup, result }, null, 1)], { type: 'application/json' }), 'thermosolve-workflow.json')}
-            >
-              <Download />
-              <span className="hidden sm:inline">Export</span>
-            </Button>
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Hint label="Reset all inputs">
+              <Button
+                variant="secondary"
+                size="sm"
+                aria-label="Reset"
+                onClick={() => {
+                  wf.load(defaultSetup())
+                  go(1)
+                }}
+              >
+                <RotateCcw />
+                <span className="hidden sm:inline">Reset</span>
+              </Button>
+            </Hint>
+            <DropdownMenu>
+              <Hint label={result ? 'Download a PDF report or the raw data' : 'Run a calculation to export results'}>
+                {/* span wrapper so the tooltip still works while the button is disabled */}
+                <span tabIndex={result ? undefined : 0} className="inline-flex">
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" disabled={!result || exporting} aria-label="Export">
+                      {exporting ? <SolvingLoader /> : <Download />}
+                      <span className="hidden sm:inline">{exporting ? 'Preparing PDF…' : 'Export'}</span>
+                      {!exporting && <ChevronDown className="hidden opacity-60 sm:block" />}
+                    </Button>
+                  </DropdownMenuTrigger>
+                </span>
+              </Hint>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuLabel>Export results</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => void exportPdf()} className="gap-3 px-3 py-2">
+                  <FileText className="size-4 text-muted-foreground" />
+                  <span>
+                    <span className="block text-[13px] font-medium">PDF report</span>
+                    <span className="block text-[11px] text-muted-foreground">All three phases, charts and errors</span>
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => result && downloadBlob(new Blob([JSON.stringify({ setup: wf.resultSetup, result }, null, 1)], { type: 'application/json' }), 'cfd-solver-workflow.json')}
+                  className="gap-3 px-3 py-2"
+                >
+                  <FileJson className="size-4 text-muted-foreground" />
+                  <span>
+                    <span className="block text-[13px] font-medium">JSON data</span>
+                    <span className="block text-[11px] text-muted-foreground">Set-up and full results</span>
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <ThemeToggle />
           </div>
         </div>
       </header>
 
       {/* mobile progress */}
-      <div className="border-b border-slate-300 bg-white px-4 py-2.5 lg:hidden">
+      <div className="mx-3 mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 lg:hidden">
         <div className="mb-2 text-xs text-slate-600">
           <span className="font-medium text-slate-900">
             {current.phase.name} · {current.roman}
@@ -240,13 +276,20 @@ export function WorkflowPage() {
         </div>
         <div className="flex gap-0.5">
           {Array.from({ length: LAST }, (_, i) => i + 1).map((id) => (
-            <button key={id} type="button" aria-label={`Go to step ${id}`} disabled={locked(id)} onClick={() => go(id)} className={cn('h-1 flex-1 disabled:cursor-not-allowed', id <= step ? 'bg-primary' : 'bg-slate-200')} />
+            <button
+              key={id}
+              type="button"
+              aria-label={`Go to step ${id}`}
+              disabled={locked(id)}
+              onClick={() => go(id)}
+              className={cn('h-1 flex-1 transition-colors duration-300 disabled:cursor-not-allowed', id <= step ? 'bg-primary' : 'bg-slate-200')}
+            />
           ))}
         </div>
       </div>
 
       <div className="mx-auto flex max-w-[1600px]">
-        <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white py-3 lg:flex">
+        <aside className="sticky top-[80px] mt-3 ml-3 hidden h-[calc(100vh-92px)] w-64 shrink-0 flex-col overflow-y-auto rounded-2xl border border-slate-200 bg-white py-3 lg:flex">
           <nav aria-label="Workflow steps" className="px-2">
             {PHASES.map((ph) => {
               const th = PHASE_THEME[ph.key]
@@ -271,19 +314,19 @@ export function WorkflowPage() {
                             onClick={() => go(s.id)}
                             aria-current={active ? 'step' : undefined}
                             className={cn(
-                              'flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40',
+                              'motion-surface flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[13px] focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40',
                               active ? 'font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
                             )}
                             style={active ? { background: th.soft, boxShadow: `inset 3px 0 0 ${th.accent}` } : undefined}
                           >
                             <span
-                              className="grid h-5 min-w-7 shrink-0 place-items-center rounded px-1 font-mono text-[10.5px] font-semibold"
+                              className={cn('motion-surface grid h-5 min-w-7 shrink-0 place-items-center rounded px-1 font-mono text-[10.5px] font-semibold', active && 'radial-pop')}
                               style={
                                 active
-                                  ? { background: th.accent, color: 'white' }
+                                  ? { background: th.accent, color: 'var(--ui-on-accent)' }
                                   : done
                                     ? { background: th.soft, color: th.text, boxShadow: `inset 0 0 0 1px ${th.ring}` }
-                                    : { boxShadow: 'inset 0 0 0 1px #cbd5e1', color: '#64748b' }
+                                    : { boxShadow: 'inset 0 0 0 1px var(--ui-rule)', color: 'var(--ui-muted)' }
                               }
                             >
                               {done ? <Check className="size-3" strokeWidth={3} /> : s.roman}
@@ -298,17 +341,16 @@ export function WorkflowPage() {
               )
             })}
           </nav>
-          <div className="mt-auto border-t border-slate-200 px-4 pt-3 text-[11.5px] leading-relaxed text-slate-500">
-            <a href="#classic" className="text-primary hover:underline">
-              Classic 1-D solver
-            </a>{' '}
-            shows every Gauss-elimination row operation for small 1-D problems.
-          </div>
         </aside>
 
         <main className="min-w-0 flex-1 px-4 pt-5 pb-6 sm:px-6 lg:px-8 lg:pt-7">
           <div className={step >= 10 ? 'mx-auto max-w-[1280px]' : 'mx-auto grid max-w-[1280px] gap-6 2xl:grid-cols-[minmax(0,1fr)_320px]'}>
             <div className="min-w-0">
+              {exportError && (
+                <Callout tone="error" title="PDF export failed" className="mb-5">
+                  {exportError}
+                </Callout>
+              )}
               {wf.error && (step === 9 || step >= 10) && (
                 <Callout tone="error" title="Calculation failed" className="mb-5">
                   {wf.error.error}
@@ -322,7 +364,29 @@ export function WorkflowPage() {
                 </Callout>
               )}
               <PhaseRail current={current.phase.key} step={step} hasResult={!!result} onGo={go} />
-              {content}
+              {/* keyed so each step's content replays the rise-in animation */}
+              <div key={step} className="step-enter">
+                {step >= 10 && !result ? (
+                  wf.status === 'solving' ? (
+                    <Card className="grid place-items-center py-12">
+                      <SolvingPanel label="Solving…" />
+                    </Card>
+                  ) : (
+                    <EmptyState
+                      variant={step === 10 ? 'results' : 'validation'}
+                      title={step === 10 ? 'No results yet' : 'Nothing to validate yet'}
+                      description="Run the calculation in Phase II to see the temperature field, charts and the comparison with the exact solution."
+                      action={
+                        <Button onClick={() => go(9)}>
+                          <PlayCircle /> Go to Solve
+                        </Button>
+                      }
+                    />
+                  )
+                ) : (
+                  content
+                )}
+              </div>
 
               <div className="mt-6 flex items-center justify-between border-t border-slate-300 pt-4">
                 <Button variant="secondary" disabled={step === 1} onClick={() => go(step - 1)}>
@@ -339,7 +403,7 @@ export function WorkflowPage() {
 
             {step < 10 && (
               <aside className="hidden 2xl:block">
-                <div className="sticky top-21 rounded-md border border-slate-300 bg-white p-4">
+                <div className="sticky top-[80px] rounded-2xl border border-slate-200 bg-white p-4">
                   <div className="mb-2 text-[13px] font-medium text-slate-900">Current set-up</div>
                   <DomainDiagram setup={setup} compact className="w-full" />
                   <dl className="mt-3 space-y-1.5 text-[12.5px]">
@@ -359,10 +423,18 @@ export function WorkflowPage() {
                     ))}
                   </dl>
                   <div className="mt-3 border-t border-slate-200 pt-1 text-[12px]">
-                    <Tex block math={governingLatex(setup.preprocessor.problem.physics, setup.preprocessor.problem.time_mode === 'transient', setup.preprocessor.problem.dimension)} />
+                    <Tex
+                      block
+                      math={governingLatex(
+                        setup.preprocessor.problem.physics,
+                        setup.preprocessor.problem.time_mode === 'transient',
+                        setup.preprocessor.problem.dimension,
+                        setup.preprocessor.problem.source.expression != null,
+                      )}
+                    />
                   </div>
                   <Button className="mt-3 w-full" disabled={blocking.length > 0 || wf.status === 'solving'} onClick={run}>
-                    {wf.status === 'solving' ? <Loader2 className="animate-spin" /> : <PlayCircle />} Run calculation
+                    {wf.status === 'solving' ? <SolvingLoader /> : <PlayCircle />} Run calculation
                   </Button>
                   {blocking.length > 0 && <p className="mt-2 text-[11px] text-red-600">{blocking[0]}</p>}
                 </div>
@@ -393,17 +465,17 @@ function PhaseRail({ current, step, hasResult, onGo }: { current: PhaseKey; step
             type="button"
             disabled={disabled}
             onClick={() => onGo(first[k])}
-            className="group flex flex-1 items-center gap-2.5 rounded-lg border bg-white px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ borderColor: active ? th.accent : '#e2e8f0', background: active ? th.soft : undefined }}
+            className="group motion-surface flex flex-1 items-center gap-2.5 rounded-lg border bg-white px-3 py-2 text-left hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ borderColor: active ? th.accent : 'var(--color-slate-200)', background: active ? th.soft : undefined }}
           >
             <span
-              className="grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold"
-              style={done || active ? { background: th.accent, color: 'white' } : { boxShadow: 'inset 0 0 0 1.5px #cbd5e1', color: '#64748b' }}
+              className={cn('motion-surface grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold', active && 'radial-pop')}
+              style={done || active ? { background: th.accent, color: 'var(--ui-on-accent)' } : { boxShadow: 'inset 0 0 0 1.5px var(--ui-rule)', color: 'var(--ui-muted)' }}
             >
               {done && !active ? <Check className="size-3.5" strokeWidth={3} /> : i + 1}
             </span>
             <span className="min-w-0">
-              <span className="block text-[10.5px] font-semibold tracking-wide uppercase" style={{ color: active || done ? th.text : '#94a3b8' }}>
+              <span className="block text-[10.5px] font-semibold tracking-wide uppercase" style={{ color: active || done ? th.text : 'var(--ui-faint)' }}>
                 {th.label}
               </span>
               <span className={cn('block truncate text-[13px] font-medium', active ? 'text-slate-900' : 'text-slate-600')}>{th.title}</span>

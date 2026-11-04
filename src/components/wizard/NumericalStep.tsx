@@ -1,12 +1,14 @@
 import { Tex } from '@/components/math/Tex'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field } from '@/components/ui/field'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupCard } from '@/components/ui/radio-group'
 import { Segmented } from '@/components/ui/segmented'
+import { Textarea } from '@/components/ui/textarea'
 import type { Simulation } from '@/hooks/useSimulation'
 import { formatTime, fmt } from '@/lib/format'
 import { TEMP_SYMBOL } from '@/lib/units'
-import { cn } from '@/lib/utils'
 import type { BoundaryScheme } from '@/types/solver'
 import { Callout, Stat, StepHeader } from './common'
 
@@ -14,7 +16,7 @@ const SCHEMES: { id: BoundaryScheme; title: string; text: string; badge?: string
   {
     id: 'first_order',
     title: 'First-order one-sided',
-    text: '(T₂ − T₁)/Δx for derivative BCs. The method used in the course solutions (MST-1).',
+    text: '(T₂ − T₁)/Δx for derivative BCs. Matches the reference example solutions.',
     badge: 'Default',
   },
   {
@@ -43,7 +45,7 @@ export function NumericalStep({ sim }: { sim: Simulation }) {
             : 'Central differences for d²T/dx², assembled into [A]{T} = {b} and solved by Gaussian elimination with partial pivoting.'
         }
       />
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Spatial discretisation</CardTitle>
@@ -59,28 +61,19 @@ export function NumericalStep({ sim }: { sim: Simulation }) {
               )}
             </div>
             <div className="mt-4">
-              <Label>Derivative boundary treatment</Label>
-              <div className="mt-2 grid gap-2">
+              <Label id="scheme-label">Derivative boundary treatment</Label>
+              <RadioGroup aria-labelledby="scheme-label" value={form.scheme} onValueChange={(v) => sim.update({ scheme: v as BoundaryScheme })} className="mt-2 gap-2">
                 {SCHEMES.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => sim.update({ scheme: s.id })}
-                    aria-pressed={form.scheme === s.id}
-                    className={cn(
-                      'rounded border px-3.5 py-2.5 text-left transition-colors',
-                      form.scheme === s.id ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500/30' : 'border-slate-200 hover:border-slate-300',
-                    )}
-                  >
-                    <div className="flex items-center gap-2 text-[13px] font-medium text-slate-900">
+                  <RadioGroupCard key={s.id} value={s.id} className="gap-0.5 px-3.5">
+                    <div className="flex items-center gap-2 text-[13px] font-medium text-foreground">
                       {s.title}
-                      {s.badge && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">{s.badge}</span>}
+                      {s.badge && <Badge variant="neutral">{s.badge}</Badge>}
                     </div>
-                    <div className="mt-0.5 text-xs leading-relaxed text-slate-500">{s.text}</div>
-                  </button>
+                    <div className="text-xs leading-relaxed text-muted-foreground">{s.text}</div>
+                  </RadioGroupCard>
                 ))}
-              </div>
-              {!hasDerivBc && <p className="mt-2 text-xs text-slate-500">Both boundaries are Dirichlet, so this choice has no effect.</p>}
+              </RadioGroup>
+              {!hasDerivBc && <p className="mt-2 text-xs text-muted-foreground">Both boundaries are Dirichlet, so this choice has no effect.</p>}
             </div>
           </CardContent>
         </Card>
@@ -139,16 +132,15 @@ export function NumericalStep({ sim }: { sim: Simulation }) {
                     <Label htmlFor="t0-list">
                       T₁⁰ … T<sub>{derived.N}</sub>⁰ [{unit}], separated by commas or spaces
                     </Label>
-                    <textarea
+                    <Textarea
                       id="t0-list"
                       rows={3}
                       value={form.initialValues}
                       aria-invalid={!!errors.initialValues}
                       onChange={(e) => sim.update({ initialValues: e.target.value })}
                       placeholder={Array.from({ length: Math.min(derived.N || 0, 8) }, () => form.initialValue || '30').join(', ')}
-                      className="rounded-md border border-slate-300 px-3 py-2 font-mono text-[13px] focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:outline-none aria-invalid:border-red-400"
                     />
-                    {errors.initialValues && <p className="text-xs text-red-600">{errors.initialValues}</p>}
+                    {errors.initialValues && <p className="text-xs text-destructive">{errors.initialValues}</p>}
                   </div>
                 )}
               </CardContent>
@@ -169,7 +161,7 @@ export function NumericalStep({ sim }: { sim: Simulation }) {
                     { value: 'manual', label: 'Manual Δt' },
                   ]}
                 />
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {form.timeStepMode === 'fourier' ? (
                     <Field id="fo" label="Fourier number" symbol="Fo" value={form.fourier} onChange={(v) => sim.update({ fourier: v })} error={errors.fourier} />
                   ) : (

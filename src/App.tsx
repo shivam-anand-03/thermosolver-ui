@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { ThemeProvider } from '@/lib/theme'
 import { SolverPage } from '@/pages/SolverPage'
 import { WorkflowPage } from '@/workflow/WorkflowPage'
 
@@ -15,5 +17,9 @@ export default function App() {
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
-  return classic ? <SolverPage /> : <WorkflowPage />
+  return (
+    <ThemeProvider>
+      <TooltipProvider>{classic ? <SolverPage /> : <WorkflowPage />}</TooltipProvider>
+    </ThemeProvider>
+  )
 }

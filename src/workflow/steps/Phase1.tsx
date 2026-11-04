@@ -1,13 +1,17 @@
 import { Tex } from '@/components/math/Tex'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupCard } from '@/components/ui/radio-group'
+import { Hint } from '@/components/ui/tooltip'
 import { Callout } from '@/components/wizard/common'
 import { fmt } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { BC_INFO, FACE_INFO, FLUIDS, LIMITS, PHYSICS_INFO, SOLIDS, activeMaterial, facesFor, governingLatex, nodeCount, spacing } from '../defaults'
 import { BCLegend, DomainDiagram } from '../DomainDiagram'
 import type { BCType, Dim, Face, Material, Physics } from '../types'
+import { SourceEditor } from '../source/SourceEditor'
 import { ChoiceCards, KV, NumField, PhaseStepHeader, Section, Select } from '../ui'
 import type { Workflow } from '../useWorkflow'
 
@@ -52,7 +56,7 @@ export function ProblemStatementStep({ wf }: { wf: Workflow }) {
         <PhysicsCards wf={wf} />
       </Section>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Section title="Time dependence">
           <ChoiceCards
             label="Time dependence"
@@ -79,26 +83,13 @@ export function ProblemStatementStep({ wf }: { wf: Workflow }) {
         </Section>
       </div>
 
-      <Section title="Volumetric heat generation" description="Linear in temperature: a constant part plus a part proportional to T.">
-        <div className="mb-3 text-[15px]">
-          <Tex block math={String.raw`q''' = q_0 + \beta\,T`} />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <NumField label="Constant generation" symbol="q_0" unit="W/m³" value={pb.source.q0} onChange={(v) => update((d) => void (d.preprocessor.problem.source.q0 = v))} />
-          <NumField
-            label="Temperature coefficient"
-            symbol="\beta"
-            unit="W/m³·K"
-            value={pb.source.beta}
-            onChange={(v) => update((d) => void (d.preprocessor.problem.source.beta = v))}
-            hint="β > 0: generation rises with T (runaway possible). β < 0: absorbing / self-limiting."
-          />
-        </div>
+      <Section title="Volumetric heat generation" description="A constant or any function of position, plus a part proportional to T. Type plain maths or LaTeX.">
+        <SourceEditor wf={wf} />
       </Section>
 
       <Section title="Governing equation">
         <div className="text-[15px]">
-          <Tex block math={governingLatex(pb.physics, pb.time_mode === 'transient', pb.dimension)} />
+          <Tex block math={governingLatex(pb.physics, pb.time_mode === 'transient', pb.dimension, pb.source.expression != null)} />
         </div>
         <p className="mt-1 text-[12.5px] text-slate-500">
           The βT term is moved to the left-hand side, so it adds <Tex math={String.raw`-\beta`} /> to the diagonal of [A]. No iteration is needed.
@@ -125,17 +116,17 @@ export function GeometryStep({ wf }: { wf: Workflow }) {
   return (
     <div className="space-y-5">
       <PhaseStepHeader phase={PHASE} roman="II" title="Geometry and grid generation" description="Size of the box-shaped domain and the number of nodes along each axis. The structured grid is generated from these." />
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-5">
           <Section title="Domain size">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {axes.map((a, i) => (
                 <NumField key={a.key} label={`${a.label} (${a.ax})`} symbol={a.sym} unit="m" min={0} disabled={i >= dim} value={g[a.key]} onChange={(v) => update((d) => void (d.preprocessor.geometry[a.key] = v))} />
               ))}
             </div>
           </Section>
           <Section title="Number of nodes" description={dim < 3 ? 'Unused directions are greyed out.' : 'Keep 3-D grids modest: every node is one equation.'}>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {axes.map((a, i) => (
                 <NumField
                   key={a.nkey}
@@ -201,9 +192,9 @@ export function PhenomenaStep({ wf }: { wf: Workflow }) {
       <Section title="Mode">
         <PhysicsCards wf={wf} />
       </Section>
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Section title="Velocity field" description={conv ? 'Uniform, prescribed velocity (the flow field is not solved for).' : 'Not used in conduction mode.'}>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {(['u', 'v', 'w'] as const).map((c, i) => (
               <NumField key={c} label={`${c} (${'xyz'[i]})`} symbol={c} unit="m/s" disabled={!conv || i >= dim} value={p.velocity[c]} onChange={(v) => update((d) => void (d.preprocessor.velocity[c] = v))} />
             ))}
@@ -254,7 +245,7 @@ function MaterialCard({ title, mat, presets, active, onChange, kDisabled }: { ti
         options={[...presets.map((p) => ({ value: p.name, label: p.name })), { value: 'custom', label: 'Custom' }]}
         className="mb-4"
       />
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <NumField label="Conductivity" symbol="k" unit="W/m·K" min={0} disabled={kDisabled} value={mat.k} onChange={(k) => onChange({ ...mat, k, name: 'custom' })} hint={kDisabled ? 'k = 0 in pure convection' : undefined} />
         <NumField label="Density" symbol="\rho" unit="kg/m³" min={0} value={mat.rho} onChange={(rho) => onChange({ ...mat, rho, name: 'custom' })} />
         <NumField label="Specific heat" symbol="c_p" unit="J/kg·K" min={0} value={mat.cp} onChange={(cp) => onChange({ ...mat, cp, name: 'custom' })} />
@@ -272,7 +263,7 @@ export function MaterialStep({ wf }: { wf: Workflow }) {
   return (
     <div className="space-y-5">
       <PhaseStepHeader phase={PHASE} roman="IV" title="Material properties" description="Fluid and solid properties. Conduction uses the solid; the convective modes use the fluid." />
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <MaterialCard title="Solid" mat={setup.preprocessor.solid} presets={SOLIDS} active={which === 'solid'} onChange={(m) => update((d) => void (d.preprocessor.solid = m))} />
         <MaterialCard
           title="Fluid"
@@ -308,56 +299,58 @@ function FaceEditor({ wf, face }: { wf: Workflow; face: Face }) {
   const group = (title: string, types: BCType[]) => (
     <div>
       <div className="mb-1 text-[10.5px] font-semibold tracking-wide text-slate-400 uppercase">{title}</div>
-      <div className="grid grid-cols-3 gap-1" role="radiogroup" aria-label={`${FACE_INFO[face].name} ${title} condition`}>
+      <RadioGroup
+        className="grid grid-cols-3 gap-1"
+        aria-label={`${FACE_INFO[face].name} ${title} condition`}
+        // one selection spans both groups: this group shows nothing checked when the type is in the other one
+        value={types.includes(bc.type) ? bc.type : ''}
+        onValueChange={(v) => set((b) => void (b.type = v as BCType))}
+      >
         {types.map((t) => {
           const on = bc.type === t
           return (
-            <button
-              key={t}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              title={`${BC_INFO[t].label}: ${BC_INFO[t].hint}`}
-              onClick={() => set((b) => void (b.type = t))}
-              className={cn(
-                'truncate rounded-md border px-1.5 py-1.5 text-center text-[12px] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:outline-none',
-                on ? 'text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50',
-              )}
-              style={on ? { background: BC_INFO[t].color, borderColor: BC_INFO[t].color } : undefined}
-            >
-              {SHORT[t]}
-            </button>
+            <Hint key={t} label={`${BC_INFO[t].label}: ${BC_INFO[t].hint}`}>
+              <RadioGroupCard
+                value={t}
+                className="block truncate px-1.5 py-1.5 text-center text-[12px] font-medium text-muted-foreground data-[state=checked]:text-white data-[state=checked]:shadow-sm data-[state=checked]:ring-0"
+                style={on ? { background: BC_INFO[t].color, borderColor: BC_INFO[t].color } : undefined}
+              >
+                {SHORT[t]}
+              </RadioGroupCard>
+            </Hint>
           )
         })}
-      </div>
+      </RadioGroup>
     </div>
   )
   return (
-    <div className="flex flex-col rounded-lg border border-slate-200 bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="inline-block h-4 w-1.5 rounded" style={{ background: BC_INFO[bc.type].color }} />
-        <span className="text-[13.5px] font-semibold text-slate-900">{FACE_INFO[face].name}</span>
-        <span className="font-mono text-[12px] text-slate-500">{FACE_INFO[face].where}</span>
-        <span className="ml-auto truncate text-[11.5px] text-slate-500">{BC_INFO[bc.type].label}</span>
-      </div>
-      <div className="space-y-2.5">
-        {group('Thermal', THERMAL)}
-        {group('Flow', FLOW)}
-      </div>
-      <div className="mt-3.5 grid gap-3 border-t border-slate-100 pt-3 [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]">
-        {(bc.type === 'temperature' || bc.type === 'inflow') && (
-          <NumField label={bc.type === 'inflow' ? 'Inlet temperature' : 'Surface temperature'} symbol={bc.type === 'inflow' ? 'T_{in}' : 'T_s'} unit={unit} value={bc.value} onChange={(v) => set((b) => void (b.value = v))} />
-        )}
-        {bc.type === 'heat_flux' && <NumField label="Heat flux in" symbol="q''" unit="W/m²" value={bc.value} onChange={(v) => set((b) => void (b.value = v))} hint="Positive = heat enters the domain." />}
-        {bc.type === 'convection' && (
-          <>
-            <NumField label="Coefficient" symbol="h" unit="W/m²K" min={0} value={bc.h} onChange={(v) => set((b) => void (b.h = v))} />
-            <NumField label="Ambient" symbol="T_\infty" unit={unit} value={bc.t_inf} onChange={(v) => set((b) => void (b.t_inf = v))} />
-          </>
-        )}
-        {(bc.type === 'insulated' || bc.type === 'outflow') && <p className="py-1 text-[12px] text-slate-500">{BC_INFO[bc.type].hint}. No value needed.</p>}
-      </div>
-    </div>
+    <Card>
+      <CardContent className="flex flex-col p-3.5">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="inline-block h-4 w-1.5 rounded" style={{ background: BC_INFO[bc.type].color }} />
+          <span className="text-[13.5px] font-semibold text-foreground">{FACE_INFO[face].name}</span>
+          <span className="font-mono text-[12px] text-muted-foreground">{FACE_INFO[face].where}</span>
+          <span className="ml-auto truncate text-[11.5px] text-muted-foreground">{BC_INFO[bc.type].label}</span>
+        </div>
+        <div className="space-y-2.5">
+          {group('Thermal', THERMAL)}
+          {group('Flow', FLOW)}
+        </div>
+        <div className="mt-3.5 grid gap-3 border-t pt-3 [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]">
+          {(bc.type === 'temperature' || bc.type === 'inflow') && (
+            <NumField label={bc.type === 'inflow' ? 'Inlet temperature' : 'Surface temperature'} symbol={bc.type === 'inflow' ? 'T_{in}' : 'T_s'} unit={unit} value={bc.value} onChange={(v) => set((b) => void (b.value = v))} />
+          )}
+          {bc.type === 'heat_flux' && <NumField label="Heat flux in" symbol="q''" unit="W/m²" value={bc.value} onChange={(v) => set((b) => void (b.value = v))} hint="Positive = heat enters the domain." />}
+          {bc.type === 'convection' && (
+            <>
+              <NumField label="Coefficient" symbol="h" unit="W/m²K" min={0} value={bc.h} onChange={(v) => set((b) => void (b.h = v))} />
+              <NumField label="Ambient" symbol="T_\infty" unit={unit} value={bc.t_inf} onChange={(v) => set((b) => void (b.t_inf = v))} />
+            </>
+          )}
+          {(bc.type === 'insulated' || bc.type === 'outflow') && <p className="py-1 text-[12px] text-muted-foreground">{BC_INFO[bc.type].hint}. No value needed.</p>}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -374,10 +367,10 @@ export function BoundaryStep({ wf }: { wf: Workflow }) {
         title="Initial and boundary conditions"
         description="Thermal conditions: temperature, heat flux, or convective heat transfer. Flow conditions for the convective modes: inflow, wall and outflow."
       />
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-5">
           <Section title="Initial condition" description={p.problem.time_mode === 'transient' ? 'Uniform temperature of the whole domain at t = 0.' : 'Only used for unsteady problems; steady problems start from the initial guess set in Phase II.'}>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <NumField label="Initial temperature" symbol="T(\mathbf{x},0)" unit={unit} value={p.initial_temperature} onChange={(v) => update((d) => void (d.preprocessor.initial_temperature = v))} disabled={p.problem.time_mode !== 'transient'} />
               <Select
                 label="Temperature unit"

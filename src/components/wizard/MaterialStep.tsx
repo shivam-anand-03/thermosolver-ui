@@ -1,4 +1,5 @@
 import { Tex } from '@/components/math/Tex'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field } from '@/components/ui/field'
 import type { Simulation } from '@/hooks/useSimulation'
@@ -26,13 +27,13 @@ export function MaterialStep({ sim }: { sim: Simulation }) {
         title="Material properties"
         description={transient ? 'Conductivity, density and specific heat define the thermal diffusivity α = k/(ρCp).' : 'Thermal conductivity and (optional) uniform volumetric heat generation.'}
       />
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)]">
         <Card>
           <CardHeader>
             <CardTitle>Properties</CardTitle>
             <CardDescription>Constant, isotropic properties. Inputs are in SI units.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field id="k" label="Thermal conductivity" symbol="k" unit="W/m·K" value={form.k} onChange={(v) => sim.update({ k: v })} error={errors.k} />
             <Field
               id="qgen"
@@ -51,17 +52,19 @@ export function MaterialStep({ sim }: { sim: Simulation }) {
               </>
             )}
             <div className="sm:col-span-2">
-              <div className="mb-1.5 text-xs font-medium text-slate-500">Quick presets</div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Quick presets</div>
               <div className="flex flex-wrap gap-1.5">
                 {PRESETS.map((p) => (
-                  <button
+                  <Button
                     key={p.name}
                     type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2.5 text-xs font-normal text-muted-foreground"
                     onClick={() => sim.update(transient ? { k: String(p.k), rho: String(p.rho), cp: String(p.cp) } : { k: String(p.k) })}
-                    className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
                   >
                     {p.name}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>

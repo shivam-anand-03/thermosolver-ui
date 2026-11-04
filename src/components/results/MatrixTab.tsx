@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Tex } from '@/components/math/Tex'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Segmented } from '@/components/ui/segmented'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { SimulationResult } from '@/types/solver'
 import { banded, dense } from '@/lib/matrix'
 import { MatrixGrid } from './MatrixGrid'
@@ -44,7 +46,7 @@ export function MatrixTab({ result }: { result: SimulationResult }) {
         </CardHeader>
         <CardContent>
           {windowed && (
-            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>
                 Rows {rowStart + 1}–{Math.min(n, rowStart + WINDOW)} of {n}
               </span>
@@ -59,7 +61,7 @@ export function MatrixTab({ result }: { result: SimulationResult }) {
               </Button>
             </div>
           )}
-          <div className="rounded border border-slate-200 bg-white p-4">
+          <div className="rounded-md border bg-card p-4">
             {view === 'b' ? (
               <MatrixGrid rows={n} cols={1} get={(i) => result.rhs[i]} rowStart={rowStart} rowCount={count} />
             ) : (
@@ -87,31 +89,29 @@ export function MatrixTab({ result }: { result: SimulationResult }) {
           <CardDescription>Row i of the matrix is the finite-difference equation written at node i.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="scroll-thin max-h-[420px] overflow-auto rounded border border-slate-200">
-            <table className="w-full text-[13px]">
-              <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs text-slate-500">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Row</th>
-                  <th className="px-3 py-2 font-medium">Type</th>
-                  <th className="px-3 py-2 font-medium">Equation</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.equations.map((e) => (
-                  <tr key={e.node} className="border-t border-slate-100 align-top">
-                    <td className="px-3 py-2 font-mono">{e.node}</td>
-                    <td className="px-3 py-2">
-                      <span className={e.kind === 'boundary' ? 'text-amber-700' : 'text-slate-500'}>{e.kind}</span>
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <Tex math={e.numeric_latex} />
-                      {e.kind === 'boundary' && <div className="text-xs text-slate-500">{e.note}</div>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table containerClassName="max-h-[420px] overflow-auto rounded-md border" className="text-[13px]">
+            <TableHeader className="sticky top-0 z-10 bg-muted">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="px-3">Row</TableHead>
+                <TableHead className="px-3">Type</TableHead>
+                <TableHead className="px-3">Equation</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {result.equations.map((e) => (
+                <TableRow key={e.node} className="align-top">
+                  <TableCell className="px-3 py-2 align-top font-mono">{e.node}</TableCell>
+                  <TableCell className="px-3 py-2 align-top">
+                    <Badge variant={e.kind === 'boundary' ? 'warning' : 'neutral'}>{e.kind}</Badge>
+                  </TableCell>
+                  <TableCell className="px-3 align-top whitespace-normal">
+                    <Tex math={e.numeric_latex} />
+                    {e.kind === 'boundary' && <div className="text-xs text-muted-foreground">{e.note}</div>}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
           {interior && (
             <div className="mt-3 rounded bg-slate-50 px-3 py-1">
               <Tex block math={String.raw`\text{Interior stencil: }\; ${interior.general_latex}`} />

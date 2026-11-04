@@ -5,11 +5,18 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="ThermoSolve — 1-D heat conduction finite-difference solver with step-by-step Gaussian elimination." />
+    <meta name="description" content="CFD Solver: heat conduction and convection finite-difference solver with step-by-step Gaussian elimination." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Mrs+Saint+Delafield&display=swap" rel="stylesheet" />
-    <title>ThermoSolve</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Mrs+Saint+Delafield&display=swap" rel="stylesheet" />
+    <title>CFD Solver</title>
+    <script>
+      // apply the saved (or OS) theme before first paint so dark mode never flashes white
+      try {
+        var t = localStorage.getItem('thermosolve-theme')
+        if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark')
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

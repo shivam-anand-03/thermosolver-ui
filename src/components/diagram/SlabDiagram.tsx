@@ -66,74 +66,74 @@ export function SlabDiagram({ nodes, lengthM, lengthUnit, left, right, tempUnit,
     >
       <defs>
         <marker id={`arr-${uid}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-          <path d="M0,0 L10,5 L0,10 z" fill="#475569" />
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--chart-text)" />
         </marker>
         <marker id={`flux-${uid}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="#ea580c" />
         </marker>
         <pattern id={`hatch-${uid}`} width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <line x1="0" y1="0" x2="0" y2="7" stroke="#94a3b8" strokeWidth="2" />
+          <line x1="0" y1="0" x2="0" y2="7" stroke="var(--ui-faint)" strokeWidth="2" />
         </pattern>
         <linearGradient id={`slab-${uid}`} x1="0" x2="1" y1="0" y2="0">
           {hasT ? (
             gradStops.map((s, i) => <stop key={i} offset={`${s.off}%`} stopColor={s.color} />)
           ) : (
             <>
-              <stop offset="0%" stopColor="#e8eef7" />
-              <stop offset="100%" stopColor="#dde6f3" />
+              <stop offset="0%" stopColor="var(--ui-slab-a)" />
+              <stop offset="100%" stopColor="var(--ui-slab-b)" />
             </>
           )}
         </linearGradient>
       </defs>
 
       {/* L dimension */}
-      <line x1={X0} x2={X1} y1={40} y2={40} stroke="#475569" strokeWidth={1} markerStart={`url(#arr-${uid})`} markerEnd={`url(#arr-${uid})`} />
-      <line x1={X0} x2={X0} y1={32} y2={YC - SLAB_H / 2 - 4} stroke="#cbd5e1" strokeDasharray="3 3" />
-      <line x1={X1} x2={X1} y1={32} y2={YC - SLAB_H / 2 - 4} stroke="#cbd5e1" strokeDasharray="3 3" />
-      <rect x={(X0 + X1) / 2 - 62} y={30} width={124} height={20} rx={4} fill="white" />
-      <text x={(X0 + X1) / 2} y={44} textAnchor="middle" fontSize={14.5} fontWeight={600} fill="#0f172a">
+      <line x1={X0} x2={X1} y1={40} y2={40} stroke="var(--chart-text)" strokeWidth={1} markerStart={`url(#arr-${uid})`} markerEnd={`url(#arr-${uid})`} />
+      <line x1={X0} x2={X0} y1={32} y2={YC - SLAB_H / 2 - 4} stroke="var(--ui-rule)" strokeDasharray="3 3" />
+      <line x1={X1} x2={X1} y1={32} y2={YC - SLAB_H / 2 - 4} stroke="var(--ui-rule)" strokeDasharray="3 3" />
+      <rect x={(X0 + X1) / 2 - 62} y={30} width={124} height={20} rx={4} fill="var(--ui-surface)" />
+      <text x={(X0 + X1) / 2} y={44} textAnchor="middle" fontSize={14.5} fontWeight={600} fill="var(--ui-ink)">
         L = {unitL(lengthM)}
       </text>
 
       {/* slab */}
-      <rect x={X0} y={YC - SLAB_H / 2} width={X1 - X0} height={SLAB_H} rx={3} fill={`url(#slab-${uid})`} stroke="#64748b" strokeWidth={1.2} />
-      <line x1={X0} x2={X1} y1={YC} y2={YC} stroke="#334155" strokeWidth={1.4} />
+      <rect x={X0} y={YC - SLAB_H / 2} width={X1 - X0} height={SLAB_H} rx={3} fill={`url(#slab-${uid})`} stroke="var(--ui-muted)" strokeWidth={1.2} />
+      <line x1={X0} x2={X1} y1={YC} y2={YC} stroke="var(--ui-slab-axis)" strokeWidth={1.4} />
 
       {/* nodes */}
       {dotR > 0 &&
-        xs.map((x, i) => <circle key={i} cx={x} cy={YC} r={dotR} fill="#0f172a" stroke="white" strokeWidth={1.5} />)}
-      {dotR === 0 && labels.map((i) => <line key={i} x1={xs[i]} x2={xs[i]} y1={YC - 6} y2={YC + 6} stroke="#0f172a" strokeWidth={1.5} />)}
+        xs.map((x, i) => <circle key={i} cx={x} cy={YC} r={dotR} fill="var(--ui-ink)" stroke="var(--ui-surface)" strokeWidth={1.5} />)}
+      {dotR === 0 && labels.map((i) => <line key={i} x1={xs[i]} x2={xs[i]} y1={YC - 6} y2={YC + 6} stroke="var(--ui-ink)" strokeWidth={1.5} />)}
 
       {/* node labels & temperatures */}
       {labels.map((i) => (
         <g key={i}>
-          <text x={xs[i]} y={YC + SLAB_H / 2 + 18} textAnchor="middle" fontSize={13.5} fontWeight={600} fill="#0f172a" fontFamily="var(--font-mono)">
+          <text x={xs[i]} y={YC + SLAB_H / 2 + 18} textAnchor="middle" fontSize={13.5} fontWeight={600} fill="var(--ui-ink)" fontFamily="var(--font-mono)">
             T<tspan fontSize={9} dy={3}>{i + 1}</tspan>
           </text>
-          <text x={xs[i]} y={YC + SLAB_H / 2 + 35} textAnchor="middle" fontSize={11.5} fill="#64748b" className="tabular">
+          <text x={xs[i]} y={YC + SLAB_H / 2 + 35} textAnchor="middle" fontSize={11.5} fill="var(--ui-muted)" className="tabular">
             {fmt(i * dx * LEN_F[lengthUnit], 3)}
           </text>
           {hasT && (
-            <text x={xs[i]} y={YC - SLAB_H / 2 - 17} textAnchor="middle" fontSize={12} fontWeight={600} fill="#1e293b" className="tabular">
+            <text x={xs[i]} y={YC - SLAB_H / 2 - 17} textAnchor="middle" fontSize={12} fontWeight={600} fill="var(--ui-ink-2)" className="tabular">
               {fmt(temperatures![i], 5)}
             </text>
           )}
         </g>
       ))}
-      <text x={X1 + 2} y={YC + SLAB_H / 2 + 35} fontSize={11} fill="#94a3b8" dx={14}>
+      <text x={X1 + 2} y={YC + SLAB_H / 2 + 35} fontSize={11} fill="var(--ui-faint)" dx={14}>
         x [{lengthUnit}]
       </text>
 
       {/* Δx dimension on the first interval */}
       <g>
-        <line x1={xs[0]} x2={xs[1]} y1={H - 22} y2={H - 22} stroke="#2563eb" strokeWidth={1} markerStart={`url(#arr-${uid})`} markerEnd={`url(#arr-${uid})`} />
-        <line x1={xs[0]} x2={xs[0]} y1={H - 30} y2={H - 14} stroke="#2563eb" />
-        <line x1={xs[1]} x2={xs[1]} y1={H - 30} y2={H - 14} stroke="#2563eb" />
-        <text x={Math.max(xs[1] + 8, X0 + 8)} y={H - 18} fontSize={13} fill="#1d4ed8" fontWeight={500}>
+        <line x1={xs[0]} x2={xs[1]} y1={H - 22} y2={H - 22} stroke="var(--ui-measure)" strokeWidth={1} markerStart={`url(#arr-${uid})`} markerEnd={`url(#arr-${uid})`} />
+        <line x1={xs[0]} x2={xs[0]} y1={H - 30} y2={H - 14} stroke="var(--ui-measure)" />
+        <line x1={xs[1]} x2={xs[1]} y1={H - 30} y2={H - 14} stroke="var(--ui-measure)" />
+        <text x={Math.max(xs[1] + 8, X0 + 8)} y={H - 18} fontSize={13} fill="var(--ui-measure-text)" fontWeight={500}>
           Δx = {unitL(dx)}
         </text>
       </g>
-      <text x={X1} y={H - 18} textAnchor="end" fontSize={12} fill="#64748b">
+      <text x={X1} y={H - 18} textAnchor="end" fontSize={12} fill="var(--ui-muted)">
         {n} nodes · {n - 1} intervals
       </text>
 
@@ -150,16 +150,16 @@ function BoundaryGlyph({ side, bc, tempUnit, uid }: { side: 'left' | 'right'; bc
   const anchor = side === 'left' ? 'start' : 'end'
   const top = YC - SLAB_H / 2 - 10
   const h = SLAB_H + 20
-  const xText = <text x={edge} y={H - 44} textAnchor="middle" fontSize={12} fill="#64748b" fontStyle="italic">{side === 'left' ? 'x = 0' : 'x = L'}</text>
+  const xText = <text x={edge} y={H - 44} textAnchor="middle" fontSize={12} fill="var(--ui-muted)" fontStyle="italic">{side === 'left' ? 'x = 0' : 'x = L'}</text>
 
   if (bc.type === 'temperature') {
     return (
       <g>
         <rect x={side === 'left' ? edge - 8 : edge} y={top} width={8} height={h} fill="#dc2626" rx={1.5} opacity={0.85} />
-        <text x={labelX} y={YC - 4} textAnchor={anchor} fontSize={14} fontWeight={600} fill="#0f172a">
+        <text x={labelX} y={YC - 4} textAnchor={anchor} fontSize={14} fontWeight={600} fill="var(--ui-ink)">
           T = {fmt(bc.value, 6)} {TEMP_SYMBOL[tempUnit]}
         </text>
-        <text x={labelX} y={YC + 13} textAnchor={anchor} fontSize={12} fill="#64748b">
+        <text x={labelX} y={YC + 13} textAnchor={anchor} fontSize={12} fill="var(--ui-muted)">
           fixed temperature
         </text>
         {xText}
@@ -169,11 +169,11 @@ function BoundaryGlyph({ side, bc, tempUnit, uid }: { side: 'left' | 'right'; bc
   if (bc.type === 'adiabatic') {
     return (
       <g>
-        <rect x={side === 'left' ? edge - 18 : edge} y={top} width={18} height={h} fill={`url(#hatch-${uid})`} stroke="#94a3b8" />
-        <text x={labelX} y={YC - 4} textAnchor={anchor} fontSize={14} fontWeight={600} fill="#0f172a">
+        <rect x={side === 'left' ? edge - 18 : edge} y={top} width={18} height={h} fill={`url(#hatch-${uid})`} stroke="var(--ui-faint)" />
+        <text x={labelX} y={YC - 4} textAnchor={anchor} fontSize={14} fontWeight={600} fill="var(--ui-ink)">
           q'' = 0
         </text>
-        <text x={labelX} y={YC + 13} textAnchor={anchor} fontSize={12} fill="#64748b">
+        <text x={labelX} y={YC + 13} textAnchor={anchor} fontSize={12} fill="var(--ui-muted)">
           insulated
         </text>
         {xText}
@@ -190,10 +190,10 @@ function BoundaryGlyph({ side, bc, tempUnit, uid }: { side: 'left' | 'right'; bc
         {[-10, 0, 10].map((dy) => (
           <line key={dy} x1={x1} x2={x2} y1={YC + dy} y2={YC + dy} stroke="#ea580c" strokeWidth={2} markerEnd={`url(#flux-${uid})`} />
         ))}
-        <text x={labelX} y={YC - 24} textAnchor={anchor} fontSize={14} fontWeight={600} fill="#0f172a">
+        <text x={labelX} y={YC - 24} textAnchor={anchor} fontSize={14} fontWeight={600} fill="var(--ui-ink)">
           q'' = {fmt(Math.abs(bc.value), 6)} W/m²
         </text>
-        <text x={labelX} y={YC + 34} textAnchor={anchor} fontSize={12} fill="#64748b">
+        <text x={labelX} y={YC + 34} textAnchor={anchor} fontSize={12} fill="var(--ui-muted)">
           {inward ? 'entering slab' : 'leaving slab'}
         </text>
         {xText}
@@ -204,10 +204,10 @@ function BoundaryGlyph({ side, bc, tempUnit, uid }: { side: 'left' | 'right'; bc
   return (
     <g>
       <line x1={edge + out * 8} x2={edge + out * 56} y1={YC + 12} y2={YC - 12} stroke="#7c3aed" strokeWidth={2} />
-      <text x={labelX} y={YC - 24} textAnchor={anchor} fontSize={14} fontWeight={600} fill="#0f172a">
+      <text x={labelX} y={YC - 24} textAnchor={anchor} fontSize={14} fontWeight={600} fill="var(--ui-ink)">
         dT/dx = {fmt(bc.value, 6)} K/m
       </text>
-      <text x={labelX} y={YC + 34} textAnchor={anchor} fontSize={12} fill="#64748b">
+      <text x={labelX} y={YC + 34} textAnchor={anchor} fontSize={12} fill="var(--ui-muted)">
         prescribed gradient
       </text>
       {xText}

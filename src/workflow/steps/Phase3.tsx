@@ -1,10 +1,12 @@
-import { CheckCircle2, ChevronLeft, ChevronRight, Download, FlaskConical, Loader2, TriangleAlert, XCircle } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, Download, FlaskConical, TriangleAlert, XCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Tex } from '@/components/math/Tex'
 import { Legend } from '@/components/results/charts'
 import { Badge } from '@/components/ui/badge'
+import { SolvingLoader } from '@/components/svg'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Callout } from '@/components/wizard/common'
 import { downloadBlob } from '@/lib/export'
@@ -116,7 +118,7 @@ function Results({ r, unit, stale }: { r: WorkflowResult; unit: string; stale: b
         </Section>
       )}
 
-      <div className={cn('grid gap-5', g.dim > 1 && g.lengths[1] / g.lengths[0] >= 0.5 && 'xl:grid-cols-2')}>
+      <div className={cn('grid grid-cols-1 gap-5', g.dim > 1 && g.lengths[1] / g.lengths[0] >= 0.5 && 'xl:grid-cols-2')}>
       {g.dim > 1 && (
         <Section
           title={g.dim === 3 ? `Temperature field, slice z = ${fmt(g.axis_coords[2][kSlice], 4)} m` : 'Temperature field'}
@@ -200,7 +202,7 @@ function NodeTable({ r, field, exact, unit, time }: { r: WorkflowResult; field: 
       const row = [p + 1, ...coordsOf(p), field[p], ...(exact ? [exact[p], Math.abs(field[p] - exact[p])] : [])]
       lines.push(row.join(','))
     }
-    downloadBlob(new Blob([lines.join('\n')], { type: 'text/csv' }), `thermosolve-results${time !== null ? `-t${time}` : ''}.csv`)
+    downloadBlob(new Blob([lines.join('\n')], { type: 'text/csv' }), `cfd-solver-results${time !== null ? `-t${time}` : ''}.csv`)
   }
 
   const start = Math.min(page, pages - 1) * PAGE
@@ -215,50 +217,48 @@ function NodeTable({ r, field, exact, unit, time }: { r: WorkflowResult; field: 
         </Button>
       }
     >
-      <div className="scroll-thin overflow-x-auto">
-        <table className="w-full text-[12.5px] tabular">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
-              <th className="py-1.5 pr-3 pl-2 font-medium">Node</th>
-              {g.dim > 1 && <th className="py-1.5 pr-3 font-medium">(i, j{g.dim > 2 ? ', k' : ''})</th>}
-              {axes.map((a) => (
-                <th key={a} className="py-1.5 pr-3 text-right font-medium">
-                  {a} [m]
-                </th>
-              ))}
-              <th className="py-1.5 pr-3 text-right font-medium">T numerical [{unit}]</th>
-              {exact && <th className="py-1.5 pr-3 text-right font-medium">T exact [{unit}]</th>}
-              {exact && <th className="py-1.5 text-right font-medium">|error|</th>}
-            </tr>
-          </thead>
-          <tbody className="font-mono">
-            {rows.map((p) => {
-              const ijk = [p % g.nx, Math.floor(p / g.nx) % g.ny, Math.floor(p / (g.nx * g.ny))].slice(0, g.dim)
-              return (
-                <tr key={p} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="py-1 pr-3 pl-2 text-slate-600">
-                    {p + 1}
-                    {fixed.has(p) && (
-                      <Badge variant="neutral" className="ml-1.5 font-sans">
-                        fixed
-                      </Badge>
-                    )}
-                  </td>
-                  {g.dim > 1 && <td className="py-1 pr-3 text-slate-500">({ijk.map((v) => v + 1).join(', ')})</td>}
-                  {coordsOf(p).map((c, i) => (
-                    <td key={i} className="py-1 pr-3 text-right text-slate-700">
-                      {fmt(c, 5)}
-                    </td>
-                  ))}
-                  <td className="py-1 pr-3 text-right text-slate-900">{field[p].toFixed(5)}</td>
-                  {exact && <td className="py-1 pr-3 text-right text-slate-700">{exact[p].toFixed(5)}</td>}
-                  {exact && <td className="py-1 text-right text-slate-500">{fmt(Math.abs(field[p] - exact[p]), 3)}</td>}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      <Table className="tabular">
+        <TableHeader>
+          <TableRow className="bg-muted hover:bg-muted">
+            <TableHead className="pr-3 pl-2">Node</TableHead>
+            {g.dim > 1 && <TableHead className="pr-3 pl-0">(i, j{g.dim > 2 ? ', k' : ''})</TableHead>}
+            {axes.map((a) => (
+              <TableHead key={a} className="pr-3 pl-0 text-right">
+                {a} [m]
+              </TableHead>
+            ))}
+            <TableHead className="pr-3 pl-0 text-right">T numerical [{unit}]</TableHead>
+            {exact && <TableHead className="pr-3 pl-0 text-right">T exact [{unit}]</TableHead>}
+            {exact && <TableHead className="px-0 text-right">|error|</TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody className="font-mono">
+          {rows.map((p) => {
+            const ijk = [p % g.nx, Math.floor(p / g.nx) % g.ny, Math.floor(p / (g.nx * g.ny))].slice(0, g.dim)
+            return (
+              <TableRow key={p}>
+                <TableCell className="py-1 pr-3 pl-2 text-muted-foreground">
+                  {p + 1}
+                  {fixed.has(p) && (
+                    <Badge variant="neutral" className="ml-1.5 font-sans">
+                      fixed
+                    </Badge>
+                  )}
+                </TableCell>
+                {g.dim > 1 && <TableCell className="py-1 pr-3 pl-0 text-muted-foreground">({ijk.map((v) => v + 1).join(', ')})</TableCell>}
+                {coordsOf(p).map((c, i) => (
+                  <TableCell key={i} className="py-1 pr-3 pl-0 text-right text-slate-700">
+                    {fmt(c, 5)}
+                  </TableCell>
+                ))}
+                <TableCell className="py-1 pr-3 pl-0 text-right text-foreground">{field[p].toFixed(5)}</TableCell>
+                {exact && <TableCell className="py-1 pr-3 pl-0 text-right text-slate-700">{exact[p].toFixed(5)}</TableCell>}
+                {exact && <TableCell className="px-0 py-1 text-right text-muted-foreground">{fmt(Math.abs(field[p] - exact[p]), 3)}</TableCell>}
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
       {pages > 1 && (
         <div className="mt-3 flex items-center justify-end gap-2 text-[12px] text-slate-600">
           <Button variant="secondary" size="sm" disabled={page === 0} onClick={() => setPage((x) => x - 1)} aria-label="Previous page">
@@ -278,22 +278,20 @@ function DenseMatrix({ M, rhs, title }: { M: number[][]; rhs?: number[] | null; 
   return (
     <div className="min-w-0">
       <div className="mb-1 text-[12.5px] font-medium text-slate-700">{title}</div>
-      <div className="scroll-thin overflow-auto rounded border border-slate-200">
-        <table className="font-mono text-[11px] tabular">
-          <tbody>
-            {M.map((row, i) => (
-              <tr key={i}>
-                {row.map((v, j) => (
-                  <td key={j} className={cn('px-1.5 py-0.5 text-right', v === 0 ? 'text-slate-300' : i === j ? 'bg-primary-soft font-medium text-primary' : 'text-slate-800')}>
-                    {cell(v, 4)}
-                  </td>
-                ))}
-                {rhs && <td className="border-l border-slate-300 px-2 py-0.5 text-right text-slate-900">{cell(rhs[i], 5)}</td>}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table containerClassName="overflow-auto rounded-md border" className="w-auto font-mono text-[11px] tabular">
+        <TableBody>
+          {M.map((row, i) => (
+            <TableRow key={i} className="border-0 hover:bg-transparent">
+              {row.map((v, j) => (
+                <TableCell key={j} className={cn('px-1.5 py-0.5 text-right', v === 0 ? 'text-slate-300' : i === j ? 'bg-primary-soft font-medium text-primary-ink' : 'text-slate-800')}>
+                  {cell(v, 4)}
+                </TableCell>
+              ))}
+              {rhs && <TableCell className="border-l border-input py-0.5 text-right text-foreground">{cell(rhs[i], 5)}</TableCell>}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   )
 }
@@ -320,7 +318,7 @@ function MatrixView({ r }: { r: WorkflowResult }) {
           ))}
         </div>
       </Section>
-      <div className="grid gap-5 lg:grid-cols-[auto_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[auto_minmax(0,1fr)]">
         {m.pattern && (
           <Section title="Sparsity pattern">
             <SparsityPattern n={m.n} pattern={m.pattern} />
@@ -334,7 +332,7 @@ function MatrixView({ r }: { r: WorkflowResult }) {
       </div>
       {m.lu && (
         <Section title="LU decomposition, PA = LU" description={`Row order P = [${m.lu.P.map((p) => p + 1).join(', ')}]`}>
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <DenseMatrix M={m.lu.L} title="L (unit lower triangular)" />
             <DenseMatrix M={m.lu.U} title="U (upper triangular)" />
           </div>
@@ -379,7 +377,7 @@ function Validation({ r, wf, unit }: { r: WorkflowResult; wf: Workflow; unit: st
         {r.phase3.exact_info.available ? (
           <>
             <div className="mb-1 flex items-center gap-2 text-[13px] font-medium text-slate-800">
-              <FlaskConical className="size-4 text-primary" /> {r.phase3.exact_info.name}
+              <FlaskConical className="size-4 text-primary-ink" /> {r.phase3.exact_info.name}
             </div>
             <Tex block math={r.phase3.exact_info.latex ?? ''} />
           </>
@@ -450,7 +448,7 @@ function Validation({ r, wf, unit }: { r: WorkflowResult; wf: Workflow; unit: st
           description="Halve the grid spacing repeatedly (solved with LU) and measure how fast the error falls. Observed order p = ln(e₁/e₂) / ln(h₁/h₂)."
           aside={
             <Button size="sm" onClick={() => void wf.refine()} disabled={wf.refining || wf.stale}>
-              {wf.refining ? <Loader2 className="animate-spin" /> : <FlaskConical />} Run study
+              {wf.refining ? <SolvingLoader /> : <FlaskConical />} Run study
             </Button>
           }
         >
@@ -463,31 +461,31 @@ function Validation({ r, wf, unit }: { r: WorkflowResult; wf: Workflow; unit: st
             </Callout>
           )}
           {ref && (
-            <div className="grid gap-5 lg:grid-cols-2">
-              <table className="w-full text-[12.5px] tabular">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-slate-500">
-                    <th className="py-1.5 font-medium">Grid</th>
-                    <th className="py-1.5 text-right font-medium">h [m]</th>
-                    <th className="py-1.5 text-right font-medium">max |e|</th>
-                    <th className="py-1.5 text-right font-medium">order</th>
-                    <th className="py-1.5 text-right font-medium">RMS</th>
-                    <th className="py-1.5 text-right font-medium">order</th>
-                  </tr>
-                </thead>
-                <tbody className="font-mono">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <Table className="tabular">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="px-0">Grid</TableHead>
+                    <TableHead className="px-0 text-right">h [m]</TableHead>
+                    <TableHead className="px-0 text-right">max |e|</TableHead>
+                    <TableHead className="px-0 text-right">order</TableHead>
+                    <TableHead className="px-0 text-right">RMS</TableHead>
+                    <TableHead className="px-0 text-right">order</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="font-mono">
                   {ref.levels.map((l) => (
-                    <tr key={l.n} className="border-b border-slate-100">
-                      <td className="py-1">{l.counts.join('×')}</td>
-                      <td className="py-1 text-right">{fmt(l.h, 4)}</td>
-                      <td className="py-1 text-right">{fmt(l.max_abs, 4)}</td>
-                      <td className="py-1 text-right font-medium text-slate-900">{l.order_max_abs !== undefined ? l.order_max_abs.toFixed(2) : '—'}</td>
-                      <td className="py-1 text-right">{fmt(l.rms, 4)}</td>
-                      <td className="py-1 text-right font-medium text-slate-900">{l.order_rms !== undefined ? l.order_rms.toFixed(2) : '—'}</td>
-                    </tr>
+                    <TableRow key={l.n}>
+                      <TableCell className="px-0 py-1">{l.counts.join('×')}</TableCell>
+                      <TableCell className="px-0 py-1 text-right">{fmt(l.h, 4)}</TableCell>
+                      <TableCell className="px-0 py-1 text-right">{fmt(l.max_abs, 4)}</TableCell>
+                      <TableCell className="px-0 py-1 text-right font-medium text-foreground">{l.order_max_abs !== undefined ? l.order_max_abs.toFixed(2) : '—'}</TableCell>
+                      <TableCell className="px-0 py-1 text-right">{fmt(l.rms, 4)}</TableCell>
+                      <TableCell className="px-0 py-1 text-right font-medium text-foreground">{l.order_rms !== undefined ? l.order_rms.toFixed(2) : '—'}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
               <div>
                 <Legend items={[{ name: 'max |e|', color: NUM }, { name: 'RMS', color: EXACT }]} />
                 <XYChart

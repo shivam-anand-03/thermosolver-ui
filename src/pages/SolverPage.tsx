@@ -1,4 +1,5 @@
 import { ArrowLeft, ArrowRight, BarChart3, Box, Calculator, Layers, Loader2, PlayCircle, Ruler, Thermometer } from 'lucide-react'
+import { EmptyState, SolvingLoader, SolvingPanel } from '@/components/svg'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { SlabDiagram } from '@/components/diagram/SlabDiagram'
 import { Header } from '@/components/layout/Header'
@@ -6,6 +7,7 @@ import { Signature } from '@/components/layout/Signature'
 import { MobileProgress, Stepper, type StepDef } from '@/components/layout/Stepper'
 import { Tex } from '@/components/math/Tex'
 import { Button } from '@/components/ui/button'
+import { Card, CardTitle } from '@/components/ui/card'
 import { BoundaryStep } from '@/components/wizard/BoundaryStep'
 import { Callout } from '@/components/wizard/common'
 import { GeometryStep } from '@/components/wizard/GeometryStep'
@@ -84,7 +86,7 @@ export function SolverPage() {
     setExporting(true)
     try {
       const blob = await downloadPdfReport(result.problem_type, sim.resultRequest)
-      downloadBlob(blob, `thermosolve-${result.problem_type}-report.pdf`)
+      downloadBlob(blob, `cfd-solver-${result.problem_type}-report.pdf`)
     } catch (e) {
       setExportError(e instanceof Error ? e.message : 'PDF export failed.')
     } finally {
@@ -112,7 +114,7 @@ export function SolverPage() {
         return <ReviewStep sim={sim} onEdit={() => go(2)} onRun={runSolver} />
       default:
         return result ? (
-          <Suspense fallback={<div className="grid place-items-center py-20 text-slate-500"><Loader2 className="animate-spin" /></div>}>
+          <Suspense fallback={<div className="grid place-items-center py-20 text-muted-foreground"><Loader2 className="animate-spin" /></div>}>
           <ResultsView
             result={result}
             example={sim.example}
@@ -144,12 +146,12 @@ export function SolverPage() {
 
       <div className="mx-auto flex max-w-[1600px]">
         {/* sidebar */}
-        <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-60 shrink-0 flex-col border-r border-slate-300 bg-white py-4 lg:flex">
-          <div className="mb-2 px-4 text-xs text-slate-500">
+        <aside className="sticky top-[80px] mt-3 ml-3 hidden h-[calc(100vh-92px)] w-60 shrink-0 flex-col overflow-y-auto rounded-2xl border bg-card py-4 shadow-[var(--ui-card-shadow)] lg:flex">
+          <div className="mb-2 px-4 text-xs text-muted-foreground">
             {form.problemType === 'steady' ? 'Steady-state problem' : 'Transient problem'}
           </div>
           <div><Stepper steps={STEPS} current={step} onSelect={go} isComplete={(id) => id < maxVisited || (id === 7 && !!result)} hasError={stepHasError} isLocked={isLocked} /></div>
-          <p className="mt-auto border-t border-slate-200 px-4 pt-3 text-[11.5px] leading-relaxed text-slate-500">
+          <p className="mt-auto border-t px-4 pt-3 text-[11.5px] leading-relaxed text-muted-foreground">
             Central differences in space, fully implicit in time. Linear systems are solved by Gaussian elimination with partial pivoting.
           </p>
         </aside>
@@ -199,8 +201,8 @@ export function SolverPage() {
               )}
               <Signature name="Shivam" />
               {step === 7 && !result && (
-                <div className="grid place-items-center py-20 text-slate-500">
-                  <Loader2 className="animate-spin" />
+                <div className="grid place-items-center py-12">
+                  {sim.status === 'solving' ? <SolvingPanel label="Solving…" /> : <EmptyState variant="results" title="No results yet" description="Run the solver from the Review step to see the temperatures, matrices and every elimination step." className="w-full" />}
                 </div>
               )}
             </div>
@@ -208,8 +210,8 @@ export function SolverPage() {
             {/* live preview (wide screens) */}
             {step < 7 && (
               <aside className="hidden 2xl:block">
-                <div className="sticky top-21 rounded-md border border-slate-300 bg-white p-4">
-                  <div className="mb-2 text-[13px] font-medium text-slate-900">Current setup</div>
+                <Card className="sticky top-[80px] p-4">
+                  <CardTitle className="mb-2 text-[13px] font-medium">Current setup</CardTitle>
                   <SlabDiagram
                     className="w-full"
                     nodes={derived.N}
@@ -236,22 +238,22 @@ export function SolverPage() {
                       ] as [string, string][]
                     ).map(([k, v]) => (
                       <div key={k} className="flex justify-between gap-2">
-                        <dt className="text-slate-500">{k}</dt>
-                        <dd className="text-right font-mono text-slate-900">{v}</dd>
+                        <dt className="text-muted-foreground">{k}</dt>
+                        <dd className="text-right font-mono text-foreground">{v}</dd>
                       </div>
                     ))}
                   </dl>
-                  <div className="mt-3 border-t border-slate-200 pt-1 text-[13px]">
+                  <div className="mt-3 border-t pt-1 text-[13px]">
                     <Tex
                       block
                       math={form.problemType === 'steady' ? String.raw`\frac{d^2T}{dx^2} + \frac{q'''}{k} = 0` : String.raw`\frac{\partial T}{\partial t} = \alpha \frac{\partial^2 T}{\partial x^2}`}
                     />
                   </div>
                   <Button className="mt-3 w-full" disabled={sim.blocking.length > 0 || sim.status === 'solving'} onClick={runSolver}>
-                    {sim.status === 'solving' ? <Loader2 className="animate-spin" /> : <PlayCircle />} Solve
+                    {sim.status === 'solving' ? <SolvingLoader /> : <PlayCircle />} Solve
                   </Button>
-                  {sim.blocking.length > 0 && <p className="mt-2 text-[11px] text-red-600">{sim.blocking[0]}</p>}
-                </div>
+                  {sim.blocking.length > 0 && <p className="mt-2 text-[11px] text-destructive">{sim.blocking[0]}</p>}
+                </Card>
               </aside>
             )}
           </div>

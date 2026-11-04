@@ -3,23 +3,27 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 
-const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
+// shadcn/ui button. `secondary` keeps the app's outlined look; `outline` is an alias of it.
+export const buttonVariants = cva(
+  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full text-sm font-medium transition-[color,background-color,box-shadow,transform] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40 active:translate-y-px disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: 'bg-primary text-white hover:bg-primary-hover',
-        secondary: 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
-        ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+        default: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary-hover',
+        secondary: 'border border-input bg-card text-card-foreground shadow-xs hover:bg-accent hover:text-accent-foreground',
+        outline: 'border border-input bg-card text-card-foreground shadow-xs hover:bg-accent hover:text-accent-foreground',
+        ghost: 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+        destructive: 'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90',
         dark: 'border border-white/15 bg-transparent text-slate-200 hover:bg-white/10',
-        success: 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700',
-        link: 'text-primary underline-offset-4 hover:underline',
+        success: 'bg-success text-white shadow-xs hover:bg-success/90',
+        link: 'text-primary-ink underline-offset-4 hover:underline',
       },
       size: {
-        default: 'h-8 px-3.5',
-        sm: 'h-8 px-3 text-[13px]',
-        lg: 'h-10 px-5',
+        default: 'h-9 px-4',
+        sm: 'h-8 px-3.5 text-[13px]',
+        lg: 'h-[42px] px-6 text-[14.5px]',
         icon: 'size-9',
+        'icon-sm': 'size-8',
       },
     },
     defaultVariants: { variant: 'default', size: 'default' },
@@ -32,6 +36,6 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({ className, variant, size, asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot : 'button'
-  return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+  return <Comp data-slot="button" className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
 })
 Button.displayName = 'Button'

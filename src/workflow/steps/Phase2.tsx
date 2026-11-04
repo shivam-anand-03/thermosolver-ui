@@ -1,7 +1,10 @@
-import { CheckCircle2, Loader2, PlayCircle, XCircle } from 'lucide-react'
+import { CheckCircle2, PlayCircle, XCircle } from 'lucide-react'
 import { Tex } from '@/components/math/Tex'
 import { Badge } from '@/components/ui/badge'
+import { SolvingLoader, SolvingPanel } from '@/components/svg'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Callout } from '@/components/wizard/common'
 import { fmt, formatMs, formatTime } from '@/lib/format'
@@ -88,7 +91,7 @@ export function MethodStep({ wf }: { wf: Workflow }) {
               { value: 'explicit', title: 'Explicit (θ = 0)', description: 'Cheapest per step, but stable only below Δt_max.' },
             ]}
           />
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <NumField label="Time step" symbol="\Delta t" unit="s" min={0} value={s.time_step} onChange={(v) => update((d) => void (d.solver.time_step = v))} />
             <NumField label="Number of steps" integer min={1} value={s.num_steps} onChange={(v) => update((d) => void (d.solver.num_steps = v))} hint={`End time t = ${formatTime(s.time_step * s.num_steps)}`} />
             <KV
@@ -187,7 +190,7 @@ export function ConvergenceStep({ wf }: { wf: Workflow }) {
         </Callout>
       )}
       <Section title="Convergence criterion">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Select
             label="Criterion"
             value={s.criterion}
@@ -204,14 +207,14 @@ export function ConvergenceStep({ wf }: { wf: Workflow }) {
       <Section title="Relaxation" description="ω = 1 is plain Gauss–Seidel; 1 < ω < 2 over-relaxes (SOR) and can cut the iterations a lot.">
         <div className="grid items-end gap-4 sm:grid-cols-3">
           <NumField label="Relaxation factor" symbol="\omega" min={0} max={2} value={s.relaxation} disabled={s.auto_relaxation} onChange={(v) => update((d) => void (d.solver.relaxation = v))} />
-          <label className="flex items-center gap-2 pb-1.5 text-[13px] text-slate-700">
+          <Label className="flex items-center gap-2 pb-1.5 font-normal leading-normal">
             <Switch checked={s.auto_relaxation} onCheckedChange={(v) => update((d) => void (d.solver.auto_relaxation = v))} />
             Optimal ω (model problem): <span className="font-mono">{fmt(wOpt, 4)}</span>
-          </label>
+          </Label>
         </div>
       </Section>
       <Section title="Initialisation" description="Starting guess for the iterations (steady problems). Unsteady problems start from the initial condition.">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Select
             label="Initial guess"
             value={s.initial_guess}
@@ -242,39 +245,43 @@ export function RunStep({ wf, onRun }: { wf: Workflow; onRun: () => void }) {
   return (
     <div className="space-y-5">
       <PhaseStepHeader phase={PHASE} roman="IV" title="Solve: run the calculation" description="Check the full set-up, then run the preprocessor, solver and post-processor in sequence." />
-      <div
-        className={cn(
-          'flex flex-wrap items-center justify-between gap-4 rounded-lg border px-5 py-4',
-          blocking.length ? 'border-red-200 bg-red-50/60' : 'border-violet-200 bg-gradient-to-r from-violet-50 to-white',
-        )}
-      >
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[15px] font-semibold text-slate-900">
-            {blocking.length ? <XCircle className="size-5 text-red-600" /> : <CheckCircle2 className="size-5 text-emerald-600" />}
-            {blocking.length ? `${blocking.length} issue${blocking.length > 1 ? 's' : ''} to fix before running` : 'Ready to solve'}
+      <Card className={cn(blocking.length ? 'border-red-200 bg-red-50/60' : 'border-[var(--ph-solver-ring)] bg-gradient-to-r from-[var(--ph-solver-soft)] to-card')}>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[15px] font-semibold text-foreground">
+              {blocking.length ? <XCircle className="size-5 text-red-600" /> : <CheckCircle2 className="size-5 text-emerald-600" />}
+              {blocking.length ? `${blocking.length} issue${blocking.length > 1 ? 's' : ''} to fix before running` : 'Ready to solve'}
+            </div>
+            <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+              {nodeCount(setup).toLocaleString()} equations · {{ fdm: 'FDM', fvm: 'FVM', fem: 'FEM' }[s.discretization]} · {solverLabel}
+              {p.problem.time_mode === 'transient' ? ` · ${s.num_steps} time steps` : ''}
+              {check && check.warnings.length > 0 ? ` · ${check.warnings.length} warning${check.warnings.length > 1 ? 's' : ''}` : ''}
+            </p>
           </div>
-          <p className="mt-0.5 text-[12.5px] text-slate-600">
-            {nodeCount(setup).toLocaleString()} equations · {{ fdm: 'FDM', fvm: 'FVM', fem: 'FEM' }[s.discretization]} · {solverLabel}
-            {p.problem.time_mode === 'transient' ? ` · ${s.num_steps} time steps` : ''}
-            {check && check.warnings.length > 0 ? ` · ${check.warnings.length} warning${check.warnings.length > 1 ? 's' : ''}` : ''}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {result && stale && <Badge variant="warning">Inputs changed since the last run</Badge>}
-          <span className="hidden text-[12px] text-slate-500 sm:inline">Ctrl / ⌘ + Enter</span>
-          <Button size="lg" onClick={onRun} disabled={status === 'solving' || blocking.length > 0} className="bg-[#4a3aa7] hover:bg-[#3d2f8f]">
-            {status === 'solving' ? <Loader2 className="animate-spin" /> : <PlayCircle />}
-            {status === 'solving' ? 'Running…' : 'Run calculation'}
-          </Button>
-        </div>
-      </div>
-      <div className="grid gap-5 lg:grid-cols-2">
+          <div className="flex items-center gap-3">
+            {result && stale && <Badge variant="warning">Inputs changed since the last run</Badge>}
+            <span className="hidden text-[12px] text-muted-foreground sm:inline">Ctrl / ⌘ + Enter</span>
+            <Button size="lg" onClick={onRun} disabled={status === 'solving' || blocking.length > 0} className="bg-[var(--ph-solver-accent)] hover:bg-[var(--ph-solver-hover)]">
+              {status === 'solving' ? <SolvingLoader /> : <PlayCircle />}
+              {status === 'solving' ? 'Running…' : 'Run calculation'}
+            </Button>
+          </div>
+        </CardContent>
+        {status === 'solving' && (
+          <div className="grid place-items-center border-t border-[var(--ph-solver-ring)] px-5 py-5">
+            <SolvingPanel label="Assembling and solving the linear system…" />
+          </div>
+        )}
+      </Card>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Section title="Phase I · Preprocessor">
           <KV
             rows={[
               ['Problem', p.problem.title],
               ['Mode', `${PHYSICS_INFO[p.problem.physics].short}, ${p.problem.time_mode === 'steady' ? 'steady' : 'unsteady'}, ${dim}-D`],
-              ["q''' = q₀ + βT", `${fmt(p.problem.source.q0, 4)} + ${fmt(p.problem.source.beta, 4)}·T`],
+              p.problem.source.expression != null
+                ? ["q''' = f(x) + βT", `${p.problem.source.expression} + ${fmt(p.problem.source.beta, 4)}·T`]
+                : ["q''' = q₀ + βT", `${fmt(p.problem.source.q0, 4)} + ${fmt(p.problem.source.beta, 4)}·T`],
               ['Domain', [g.length, g.width, g.height].slice(0, dim).map((v) => fmt(v, 4)).join(' × ') + ' m'],
               ['Grid', [g.nx, g.ny, g.nz].slice(0, dim).join(' × ') + ` = ${nodeCount(setup).toLocaleString()} nodes`],
               ['Material', `${activeMaterial(setup).name || 'custom'} (k = ${fmt(activeMaterial(setup).k, 4)})`],
@@ -336,7 +343,7 @@ export function RunStep({ wf, onRun }: { wf: Workflow; onRun: () => void }) {
             {result.log.map((l, i) => (
               <li key={i} className="flex gap-3">
                 <span className="w-16 shrink-0 text-right text-slate-400">{l.t_ms.toFixed(1)} ms</span>
-                <span className="w-28 shrink-0 text-primary">{l.phase}</span>
+                <span className="w-28 shrink-0 text-primary-ink">{l.phase}</span>
                 <span className="text-slate-800">{l.message}</span>
               </li>
             ))}

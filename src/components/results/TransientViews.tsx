@@ -1,6 +1,7 @@
 import { Pause, Play, RotateCcw, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -147,13 +148,13 @@ export function TemperatureHistory({ result, temp }: { result: TransientResult; 
         ) : (
           <div className="flex flex-wrap items-center gap-2">
             {selected.map((node) => (
-              <span key={node} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white py-0.5 pr-1 pl-2 text-xs text-slate-700">
+              <Badge key={node} variant="outline" className="gap-1.5 rounded-full bg-card py-0.5 pr-1 pl-2 text-xs font-normal">
                 <span className="size-2.5 rounded-full" style={{ background: SERIES[slots.get(node)!] }} />
                 Node {node + 1}
-                <button aria-label={`Remove node ${node + 1}`} onClick={() => toggle(node, false)} className="rounded-full p-0.5 hover:bg-slate-100">
+                <Button type="button" variant="ghost" size="icon-sm" aria-label={`Remove node ${node + 1}`} onClick={() => toggle(node, false)} className="size-4">
                   <X className="size-3" />
-                </button>
-              </span>
+                </Button>
+              </Badge>
             ))}
             <form
               className="flex items-center gap-1.5"
@@ -199,7 +200,7 @@ export function TemperatureHistory({ result, temp }: { result: TransientResult; 
               label={{ value: `Temperature [${temp.symbol}]`, angle: -90, position: 'insideLeft', offset: 4, fill: CHART.text, fontSize: 12, style: { textAnchor: 'middle' } }}
             />
             <Tooltip
-              cursor={{ stroke: '#94a3b8', strokeDasharray: '3 3' }}
+              cursor={{ stroke: 'var(--chart-axis)', strokeDasharray: '3 3' }}
               content={({ active, payload, label }) =>
                 active && payload?.length ? (
                   <div className="rounded border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg">

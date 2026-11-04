@@ -1,8 +1,12 @@
 import { useId, useState } from 'react'
 import { Tex } from '@/components/math/Tex'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupCard } from '@/components/ui/radio-group'
+import { Select as SelectRoot, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { StepIllustration, type WorkflowStep } from '@/components/svg'
 import { PHASE_THEME, phaseOf } from './theme'
 
 /** Numeric input that keeps the typed text and only commits valid numbers. */
@@ -87,7 +91,7 @@ export interface Choice<T extends string | number> {
   disabled?: boolean
 }
 
-/** Radio group rendered as selectable cards. */
+/** Radio group rendered as selectable cards (shadcn RadioGroup; Radix provides arrow-key navigation). */
 export function ChoiceCards<T extends string | number>({
   value,
   onChange,
@@ -102,75 +106,77 @@ export function ChoiceCards<T extends string | number>({
   label: string
 }) {
   return (
-    <div
-      role="radiogroup"
+    <RadioGroup
       aria-label={label}
+      value={String(value)}
+      // Radix works with strings; map back to the original (possibly numeric) option value
+      onValueChange={(v) => {
+        const o = options.find((x) => String(x.value) === v)
+        if (o) onChange(o.value)
+      }}
       className={cn('grid gap-2', columns === 2 && 'sm:grid-cols-2', columns === 3 && 'sm:grid-cols-3', columns === 4 && 'sm:grid-cols-2 xl:grid-cols-4')}
     >
-      {options.map((o) => {
-        const active = o.value === value
-        return (
-          <button
-            key={String(o.value)}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            disabled={o.disabled}
-            onClick={() => onChange(o.value)}
-            className={cn(
-              'flex flex-col items-start gap-1 rounded-md border px-3 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45',
-              active ? 'border-primary bg-primary-soft ring-1 ring-primary' : 'border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50',
-            )}
-          >
-            <span className="flex w-full items-center justify-between gap-2">
-              <span className={cn('text-[13.5px] font-semibold', active ? 'text-primary' : 'text-slate-900')}>{o.title}</span>
-              {o.badge}
+      {options.map((o) => (
+        <RadioGroupCard key={String(o.value)} value={String(o.value)} disabled={o.disabled} className="group">
+          <span className="flex w-full items-center justify-between gap-2">
+            <span className="text-[13.5px] font-semibold text-foreground group-data-[state=checked]:text-primary-ink">{o.title}</span>
+            {o.badge}
+          </span>
+          {o.description && <span className="text-[12px] leading-snug text-muted-foreground">{o.description}</span>}
+          {o.math && (
+            <span className="w-full overflow-x-auto overflow-y-hidden text-[12px] text-slate-700">
+              <Tex math={o.math} />
             </span>
-            {o.description && <span className="text-[12px] leading-snug text-slate-600">{o.description}</span>}
-            {o.math && (
-              <span className="w-full overflow-x-auto text-[12px] text-slate-700">
-                <Tex math={o.math} />
-              </span>
-            )}
-          </button>
-        )
-      })}
-    </div>
+          )}
+        </RadioGroupCard>
+      ))}
+    </RadioGroup>
   )
 }
 
 export function Section({ title, description, children, className, aside }: { title: React.ReactNode; description?: React.ReactNode; children: React.ReactNode; className?: string; aside?: React.ReactNode }) {
   return (
-    <section className={cn('rounded-lg border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]', className)}>
-      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 px-4 py-3">
-        <div>
-          <h3 className="text-[14px] font-semibold text-slate-900">{title}</h3>
-          {description && <p className="mt-0.5 text-[12.5px] leading-snug text-slate-500">{description}</p>}
+    <Card className={className}>
+      <CardHeader className="flex-row flex-wrap items-start justify-between gap-2 py-3">
+        <div className="min-w-0">
+          <CardTitle>{title}</CardTitle>
+          {description && <CardDescription className="mt-0.5">{description}</CardDescription>}
         </div>
-        {aside}
-      </div>
-      <div className="p-4">{children}</div>
-    </section>
+        {aside && <div className="max-w-full min-w-0">{aside}</div>}
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   )
 }
 
+const ROMAN = ['I', 'II', 'III', 'IV', 'V']
+const PHASE_FIRST_STEP = { pre: 1, solver: 6, post: 10 } as const
+
 export function PhaseStepHeader({ phase, roman, title, description }: { phase: string; roman: string; title: string; description: React.ReactNode }) {
+  // workflow step number (1–11) from phase + roman numeral, for the line-art illustration
+  const idx = ROMAN.indexOf(roman)
+  const stepNo = idx < 0 ? null : ((PHASE_FIRST_STEP[phaseOf(phase)] + idx) as WorkflowStep)
   return (
     <div className="mb-5 flex gap-3.5">
       <span
-        className="grid h-11 min-w-11 shrink-0 place-items-center rounded-lg px-2 font-mono text-[15px] font-semibold text-white shadow-sm"
+        className="grid h-11 min-w-11 shrink-0 place-items-center rounded-lg px-2 radial-pop font-mono text-[15px] font-semibold text-white shadow-sm"
         style={{ background: PHASE_THEME[phaseOf(phase)].accent }}
         aria-hidden
       >
         {roman}
       </span>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="text-[11.5px] font-semibold tracking-wide uppercase" style={{ color: PHASE_THEME[phaseOf(phase)].text }}>
           {phase}
         </div>
         <h2 className="text-xl leading-tight font-semibold text-slate-900">{title}</h2>
         <p className="mt-1 max-w-3xl text-[13.5px] leading-relaxed text-slate-600">{description}</p>
       </div>
+      {stepNo && (
+        <div className="hidden shrink-0 place-items-center rounded-2xl border bg-card p-2.5 text-foreground/80 shadow-[var(--ui-card-shadow)] sm:grid" aria-hidden>
+          <StepIllustration step={stepNo} accent={PHASE_THEME[phaseOf(phase)].accent} className="size-16" />
+        </div>
+      )}
     </div>
   )
 }
@@ -193,18 +199,18 @@ export function Select<T extends string>({ value, onChange, options, label, clas
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       <Label htmlFor={id}>{label}</Label>
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value as T)}
-        className="h-8 rounded border border-slate-300 bg-white px-2 text-[13px] text-slate-900 focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <SelectRoot value={value} onValueChange={(v) => onChange(v as T)}>
+        <SelectTrigger id={id}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </SelectRoot>
     </div>
   )
 }
@@ -212,17 +218,12 @@ export function Select<T extends string>({ value, onChange, options, label, clas
 /** Headline number tile. `hot` / `cold` tint the extremes of the temperature field. */
 export function Tile({ label, value, sub, tone = 'neutral' }: { label: React.ReactNode; value: React.ReactNode; sub?: React.ReactNode; tone?: 'neutral' | 'hot' | 'cold' }) {
   return (
-    <div
-      className={cn(
-        'rounded-lg border bg-white px-3.5 py-2.5',
-        tone === 'hot' && 'border-orange-200 bg-orange-50/70',
-        tone === 'cold' && 'border-blue-200 bg-blue-50/70',
-        tone === 'neutral' && 'border-slate-200',
-      )}
-    >
-      <div className="text-[11.5px] font-medium text-slate-500">{label}</div>
-      <div className="mt-0.5 font-mono text-[16px] font-semibold text-slate-900 tabular">{value}</div>
-      {sub && <div className="mt-0.5 truncate text-[11px] text-slate-500">{sub}</div>}
-    </div>
+    <Card className={cn('shadow-none', tone === 'hot' && 'border-orange-200 bg-orange-50/70', tone === 'cold' && 'border-sky-200 bg-sky-50/70')}>
+      <CardContent className="px-3.5 py-2.5">
+        <div className="text-[11.5px] font-medium text-muted-foreground">{label}</div>
+        <div className="mt-0.5 font-mono text-[16px] font-semibold text-foreground tabular">{value}</div>
+        {sub && <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{sub}</div>}
+      </CardContent>
+    </Card>
   )
 }

@@ -23,15 +23,15 @@ function opLatex(desc: string) {
 function StepCard({ step, n }: { step: EliminationStep; n: number }) {
   const k = step.pivot_column - 1
   return (
-    <div className="rounded-md border border-slate-200 bg-white">
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-2.5">
-        <span className="rounded-md bg-slate-900 px-2 py-0.5 font-mono text-xs font-semibold text-white">STEP {step.step}</span>
-        <span className="text-[13px] text-slate-700">
+    <Card>
+      <CardHeader className="flex-row flex-wrap items-center gap-2">
+        <Badge className="border-transparent bg-foreground font-mono font-semibold text-background">STEP {step.step}</Badge>
+        <span className="text-[13px] text-foreground/85">
           Pivot <Tex math={`a_{${step.pivot_row}${step.pivot_column}} = ${fmt(step.pivot_value, 6)}`} />
         </span>
         {step.swapped && <Badge variant="warning">Rows {step.pivot_row} ↔ {step.swap_with} swapped (partial pivoting)</Badge>}
-      </div>
-      <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)]">
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)]">
         <div className="text-[13px]">
           <div className="text-[12px] font-medium text-slate-500">Operations</div>
           {step.operations.length === 0 ? (
@@ -59,8 +59,8 @@ function StepCard({ step, n }: { step: EliminationStep; n: number }) {
             highlight={{ pivot: [k, k], pivotRow: k, changedRows: step.operations.map((o) => o.target - 1) }}
           />
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -73,24 +73,24 @@ export function AlgorithmTab({ result }: { result: SimulationResult }) {
   const transient = result.problem_type === 'transient'
 
   const initial = g.initial_augmented && (
-    <div className="rounded-md border border-slate-200 bg-white">
-      <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
-        <span className="rounded-md bg-slate-900 px-2 py-0.5 font-mono text-xs font-semibold text-white">STEP 0</span>
-        <span className="text-[13px] text-slate-700">Initial augmented matrix [A | b]</span>
-      </div>
-      <div className="p-4">
+    <Card>
+      <CardHeader className="flex-row items-center gap-2">
+        <Badge className="border-transparent bg-foreground font-mono font-semibold text-background">STEP 0</Badge>
+        <span className="text-[13px] text-foreground/85">Initial augmented matrix [A | b]</span>
+      </CardHeader>
+      <CardContent>
         <MatrixGrid rows={n} cols={n} compact={n > 8} get={dense(g.initial_augmented)} rhs={(i) => g.initial_augmented![i][n]} />
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 
   const back = (
-    <div className="rounded-md border border-slate-200 bg-white">
-      <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
-        <span className="rounded-md bg-emerald-600 px-2 py-0.5 font-mono text-xs font-semibold text-white">BACK SUBSTITUTION</span>
-        <span className="text-[13px] text-slate-700">From the last row upward</span>
-      </div>
-      <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <Card>
+      <CardHeader className="flex-row items-center gap-2">
+        <Badge className="border-transparent bg-emerald-600 font-mono font-semibold text-white">BACK SUBSTITUTION</Badge>
+        <span className="text-[13px] text-foreground/85">From the last row upward</span>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div>
           <Tex block math={String.raw`T_n = \frac{b_n^*}{a_{nn}^*},\qquad T_i = \frac{b_i^* - \sum_{j>i} a_{ij}^*\,T_j}{a_{ii}^*}`} />
           <div className="scroll-thin mt-2 max-h-[420px] space-y-0.5 overflow-auto">
@@ -110,8 +110,8 @@ export function AlgorithmTab({ result }: { result: SimulationResult }) {
         {g.upper_augmented && (
           <MatrixGrid rows={n} cols={n} compact={n > 8} get={dense(g.upper_augmented)} rhs={(i) => g.upper_augmented![i][n]} caption="Upper-triangular system [A* | b*] after forward elimination" />
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 
   return (

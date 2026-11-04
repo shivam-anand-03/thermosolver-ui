@@ -1,4 +1,4 @@
-// Types mirroring the ThermoSolve API (backend/app/models.py and solver results).
+// Types mirroring the CFD Solver API (backend/app/models.py and solver results).
 
 export type ProblemType = 'steady' | 'transient'
 export type BoundaryType = 'temperature' | 'heat_flux' | 'gradient' | 'adiabatic'

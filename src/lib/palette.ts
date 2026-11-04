@@ -1,11 +1,12 @@
 // Chart colours. Categorical slots come from the validated reference palette and are
-// assigned in fixed order (never cycled). Time snapshots use a single-hue blue ramp
+// assigned in fixed order (never cycled); slot 1 is the brand gold. Time snapshots use a single-hue gold ramp
 // (ordinal: lightest step kept at ≥ 2:1 contrast on the light surface).
 
-export const SERIES = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948']
+export const SERIES = ['#c9952c', '#eb6834', '#1baf7a', '#2a78d6', '#e87ba4', '#008300', '#4a3aa7', '#e34948']
 export const MAX_SERIES = SERIES.length
 
-export const BLUE_RAMP = ['#86b6ef', '#6da7ec', '#5598e7', '#3987e5', '#2a78d6', '#256abf', '#1c5cab', '#184f95', '#104281', '#0d366b']
+// Gold theme: the snapshot ramp is a single-hue gold ramp (the name is kept so imports stay stable).
+export const BLUE_RAMP = ['#f0d592', '#e8c46e', '#e0b54f', '#d4a536', '#c9952c', '#b5841f', '#9c7019', '#825d15', '#6a4c12', '#523a0e']
 
 /** Pick `count` evenly spaced ordinal steps from the blue ramp (light → dark = early → late). */
 export function ordinalBlues(count: number): string[] {
@@ -13,11 +14,12 @@ export function ordinalBlues(count: number): string[] {
   return Array.from({ length: count }, (_, i) => BLUE_RAMP[Math.round((i * (BLUE_RAMP.length - 1)) / (count - 1))])
 }
 
+/** Chart chrome colours; CSS variables so they follow light / dark mode. */
 export const CHART = {
-  grid: '#e5e7eb',
-  axis: '#94a3b8',
-  text: '#475569',
-  reference: '#64748b',
+  grid: 'var(--chart-grid)',
+  axis: 'var(--chart-axis)',
+  text: 'var(--chart-text)',
+  reference: 'var(--chart-reference)',
 }
 
 /** Sequential heat colour for the slab diagram (cool blue → warm orange), t in [0, 1]. */
