@@ -372,6 +372,53 @@ h2 { font-size: clamp(30px, 3.6vw, 44px); line-height: 1.08; letter-spacing: -.0
 @keyframes sign { from { stroke-dashoffset: 520; fill-opacity: 0; } 70% { stroke-dashoffset: 0; fill-opacity: 0; } to { stroke-dashoffset: 0; fill-opacity: 1; } }
 @media (max-width: 760px) { .foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .foot-grid > :first-child { grid-column: 1 / -1; } .band { padding: 36px 26px; } }
 
+/* big monitors: wider content and a larger type scale so the page fills a 1920 to 2560+ screen */
+@media (min-width: 1700px) {
+  :root { --maxw: 1440px; }
+  body { font-size: 17px; }
+  h1 { font-size: clamp(60px, 3.6vw, 76px); max-width: none; }
+  h2 { font-size: clamp(44px, 2.5vw, 52px); }
+  .lead { font-size: 19px; max-width: 64ch; }
+  .sub { font-size: 18px; }
+  .hero { padding-block: 128px 24px; }
+  .sec { padding-block: 140px; }
+  .nav { height: 66px; }
+  .links a, .text-link { font-size: 16px; }
+  .btn { height: 46px; padding: 0 26px; font-size: 15.5px; }
+  .grid4 h3 { font-size: 16.5px; } .grid4 p { font-size: 14.5px; }
+  .phase h3 { font-size: 23px; } .steps li { font-size: 15px; }
+  .num-v { font-size: 34px; } .num-l { font-size: 13.5px; }
+  .vt table { font-size: 15px; }
+  .faq summary { font-size: 19px; } .faq .a { font-size: 16.5px; }
+  .algo-body, .demo-body { font-size: 14px; }
+  .mx { font-size: 14px; } .mx .c { padding: 7px 11px; }
+  .band { padding: 64px 56px; } .band h2 { font-size: 34px; } .band p { font-size: 16.5px; }
+}
+@media (min-width: 2200px) {
+  :root { --maxw: 1680px; }
+  body { font-size: 18px; }
+  h1 { font-size: clamp(76px, 3.5vw, 92px); }
+  h2 { font-size: clamp(52px, 2.4vw, 60px); }
+  .lead { font-size: 21px; }
+  .sub { font-size: 19.5px; }
+  .hero { padding-block: 156px 32px; }
+  .sec { padding-block: 168px; }
+  .nav { height: 72px; padding: 0 12px 0 28px; }
+  .brand { font-size: 21px; } .brand img { width: 34px; height: 34px; }
+  .links a, .text-link { font-size: 17px; }
+  .btn { height: 50px; padding: 0 30px; font-size: 16.5px; }
+  .eyebrow { font-size: 12.5px; }
+  .grid4 > div { padding: 24px 26px; } .grid4 h3 { font-size: 18px; } .grid4 p { font-size: 15.5px; }
+  .phase { padding: 30px; } .phase h3 { font-size: 26px; } .steps li { font-size: 16px; } .steps small { font-size: 13.5px; }
+  .num { padding: 26px 20px; } .num-v { font-size: 40px; } .num-l { font-size: 14.5px; }
+  .vt table { font-size: 16px; } .vt td { padding: 20px 24px; }
+  .faq { max-width: 960px; } .faq summary { font-size: 21px; } .faq .a { font-size: 18px; }
+  .frame { padding: 36px; border-radius: 36px; }
+  .mx { font-size: 15.5px; } .ops { font-size: 14.5px; }
+  .code pre { font-size: 14.5px; }
+  .foot a { font-size: 16px; } .blurb { font-size: 16px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }

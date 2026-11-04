@@ -24,7 +24,7 @@ export function Header({
 }) {
   return (
     <header className="sticky top-0 z-30 px-3 pt-3">
-      <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-3 rounded-full border border-slate-200 bg-white/85 pr-2 pl-4 shadow-[0_12px_32px_-16px_rgba(18,18,18,0.18)] backdrop-blur-md backdrop-saturate-150 sm:pl-5">
+      <div className="mx-auto flex h-14 max-w-[1600px] min-[1900px]:max-w-[1840px] min-[2300px]:max-w-[2240px] items-center gap-3 rounded-full border border-slate-200 bg-white/85 pr-2 pl-4 shadow-[0_12px_32px_-16px_rgba(18,18,18,0.18)] backdrop-blur-md backdrop-saturate-150 sm:pl-5">
         <a href="/" className="flex min-w-0 shrink items-center gap-2.5" aria-label="CFD Solver home">
           <LogoMark size={34} decorative className="shrink-0" />
           <span className="text-[15px] font-bold tracking-tight whitespace-nowrap text-slate-900 max-[420px]:sr-only sm:text-[19px]">

@@ -144,9 +144,9 @@ export function SolverPage() {
       />
       <MobileProgress steps={STEPS} current={step} onSelect={go} isLocked={isLocked} />
 
-      <div className="mx-auto flex max-w-[1600px]">
+      <div className="mx-auto flex max-w-[1600px] min-[1900px]:max-w-[1840px] min-[2300px]:max-w-[2240px]">
         {/* sidebar */}
-        <aside className="sticky top-[80px] mt-3 ml-3 hidden h-[calc(100vh-92px)] w-60 shrink-0 flex-col overflow-y-auto rounded-2xl border bg-card py-4 shadow-[var(--ui-card-shadow)] lg:flex">
+        <aside className="sticky top-[80px] mt-3 ml-3 hidden h-[calc(100vh-92px)] w-60 min-[2300px]:w-72 shrink-0 flex-col overflow-y-auto rounded-2xl border bg-card py-4 shadow-[var(--ui-card-shadow)] lg:flex">
           <div className="mb-2 px-4 text-xs text-muted-foreground">
             {form.problemType === 'steady' ? 'Steady-state problem' : 'Transient problem'}
           </div>
@@ -157,7 +157,7 @@ export function SolverPage() {
         </aside>
 
         <main ref={mainRef} className="min-w-0 flex-1 px-4 pt-5 pb-6 sm:px-6 lg:px-8 lg:pt-7">
-          <div className={step === 7 ? 'mx-auto max-w-[1280px]' : 'mx-auto grid max-w-[1280px] gap-6 2xl:grid-cols-[minmax(0,1fr)_320px]'}>
+          <div className={step === 7 ? 'mx-auto max-w-[1280px] min-[1900px]:max-w-[1520px] min-[2300px]:max-w-[1800px]' : 'mx-auto grid max-w-[1280px] min-[1900px]:max-w-[1520px] min-[2300px]:max-w-[1800px] gap-6 2xl:grid-cols-[minmax(0,1fr)_320px] min-[2300px]:grid-cols-[minmax(0,1fr)_380px]'}>
             <div className="min-w-0">
               {sim.error && (step === 6 || step === 7) && (
                 <Callout tone="error" title="Solver error" className="mb-5">

@@ -159,7 +159,7 @@ export function WorkflowPage() {
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 px-3 pt-3">
-        <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-3 rounded-full border border-slate-200 bg-white/85 pr-2 pl-4 shadow-[0_12px_32px_-16px_rgba(18,18,18,0.18)] backdrop-blur-md backdrop-saturate-150 sm:pl-5">
+        <div className="mx-auto flex h-14 max-w-[1600px] min-[1900px]:max-w-[1840px] min-[2300px]:max-w-[2240px] items-center gap-3 rounded-full border border-slate-200 bg-white/85 pr-2 pl-4 shadow-[0_12px_32px_-16px_rgba(18,18,18,0.18)] backdrop-blur-md backdrop-saturate-150 sm:pl-5">
           <a href="#" className="flex min-w-0 shrink items-center gap-3" aria-label="CFD Solver home">
             <span className="flex items-center gap-2.5">
               <LogoMark size={34} decorative className="shrink-0" />
@@ -288,8 +288,8 @@ export function WorkflowPage() {
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-[1600px]">
-        <aside className="sticky top-[80px] mt-3 ml-3 hidden h-[calc(100vh-92px)] w-64 shrink-0 flex-col overflow-y-auto rounded-2xl border border-slate-200 bg-white py-3 lg:flex">
+      <div className="mx-auto flex max-w-[1600px] min-[1900px]:max-w-[1840px] min-[2300px]:max-w-[2240px]">
+        <aside className="sticky top-[80px] mt-3 ml-3 hidden h-[calc(100vh-92px)] w-64 min-[2300px]:w-72 shrink-0 flex-col overflow-y-auto rounded-2xl border border-slate-200 bg-white py-3 lg:flex">
           <nav aria-label="Workflow steps" className="px-2">
             {PHASES.map((ph) => {
               const th = PHASE_THEME[ph.key]
@@ -344,7 +344,7 @@ export function WorkflowPage() {
         </aside>
 
         <main className="min-w-0 flex-1 px-4 pt-5 pb-6 sm:px-6 lg:px-8 lg:pt-7">
-          <div className={step >= 10 ? 'mx-auto max-w-[1280px]' : 'mx-auto grid max-w-[1280px] gap-6 2xl:grid-cols-[minmax(0,1fr)_320px]'}>
+          <div className={step >= 10 ? 'mx-auto max-w-[1280px] min-[1900px]:max-w-[1520px] min-[2300px]:max-w-[1800px]' : 'mx-auto grid max-w-[1280px] min-[1900px]:max-w-[1520px] min-[2300px]:max-w-[1800px] gap-6 2xl:grid-cols-[minmax(0,1fr)_320px] min-[2300px]:grid-cols-[minmax(0,1fr)_380px]'}>
             <div className="min-w-0">
               {exportError && (
                 <Callout tone="error" title="PDF export failed" className="mb-5">
