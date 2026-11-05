@@ -19,20 +19,55 @@ export class ApiRequestError extends Error {
   }
 }
 
+/**
+ * Client-side ceiling for one request. The server stops any calculation at its own 30 s budget,
+ * so this only fires when the server never answers, typically a free-tier host that was asleep
+ * and is still booting (that can take up to a minute).
+ */
+const REQUEST_TIMEOUT_MS = 90_000
+
+/** True while the API has not answered yet in this page load, so slowness can be explained as a cold start. */
+let serverAwake = false
+
+/**
+ * Fire-and-forget ping so a sleeping (free-tier) API starts booting while the user is still
+ * reading the first step, instead of on their first Run.
+ */
+export function warmUpApi(): void {
+  fetch(`${BASE}/api/health`, { cache: 'no-store' })
+    .then((r) => {
+      if (r.ok) serverAwake = true
+    })
+    .catch(() => {})
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<Response> {
+  const timeout = new AbortController()
+  const timer = setTimeout(() => timeout.abort(), REQUEST_TIMEOUT_MS)
+  // abort on either the caller's signal (stale request) or our timeout
+  const signal = init?.signal ? anySignal([init.signal, timeout.signal]) : timeout.signal
   let res: Response
   try {
     res = await fetch(`${BASE}${path}`, {
       ...init,
+      signal,
       headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
     })
+    serverAwake = true
   } catch {
+    const timedOut = timeout.signal.aborted && !init?.signal?.aborted
     throw new ApiRequestError({
       success: false,
       kind: 'network',
-      error: 'Cannot reach the CFD Solver API. Make sure the backend is running on port 8000.',
+      error: timedOut
+        ? serverAwake
+          ? 'The server did not respond in time. Please try again.'
+          : 'The server is taking too long to respond. If it was asleep (free hosting), it needs up to a minute to wake up; please try again.'
+        : 'Cannot reach the CFD Solver API. Make sure the backend is running on port 8000.',
       details: [],
     })
+  } finally {
+    clearTimeout(timer)
   }
   if (!res.ok) {
     let payload: ApiError
@@ -50,6 +85,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<Response> {
     throw new ApiRequestError(payload)
   }
   return res as Response & { json(): Promise<T> }
+}
+
+function anySignal(signals: AbortSignal[]): AbortSignal {
+  if ('any' in AbortSignal) return AbortSignal.any(signals)
+  const ctrl = new AbortController()
+  for (const sg of signals) {
+    if (sg.aborted) {
+      ctrl.abort()
+      break
+    }
+    sg.addEventListener('abort', () => ctrl.abort(), { once: true })
+  }
+  return ctrl.signal
 }
 
 export async function solve(type: ProblemType, body: SteadyRequest | TransientRequest): Promise<SimulationResult> {
