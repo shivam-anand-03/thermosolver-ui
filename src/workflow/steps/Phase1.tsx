@@ -106,7 +106,6 @@ export function GeometryStep({ wf }: { wf: Workflow }) {
   const g = setup.preprocessor.geometry
   const h = spacing(setup)
   const n = nodeCount(setup)
-  const cell = setup.solver.discretization === 'fvm'
   const limit = setup.solver.linear_solver === 'gauss_seidel' ? LIMITS.iterative : LIMITS.direct
   const axes = [
     { key: 'length', nkey: 'nx', label: 'Length', sym: 'L', ax: 'x' },
@@ -146,8 +145,8 @@ export function GeometryStep({ wf }: { wf: Workflow }) {
           <Section title="Grid summary">
             <KV
               rows={[
-                ['Grid type', cell ? 'Cell-centred (FVM): nodes at control-volume centres' : 'Vertex (FDM / FEM): nodes on the faces too'],
-                ['Spacing', cell ? 'Δ = L / N' : 'Δ = L / (N − 1)'],
+                ['Grid type', setup.solver.discretization === 'fvm' ? 'Vertex-centred (FVM): nodes on the faces, half control volumes at the boundary' : 'Vertex (FDM / FEM): nodes on the faces too'],
+                ['Spacing', 'Δ = L / (N − 1)'],
                 ...h.map((v, i): [string, string] => [`Δ${'xyz'[i]}`, `${fmt(v, 5)} m`]),
                 ['Total nodes (unknowns)', n.toLocaleString()],
                 ['Coefficient matrix', `${n.toLocaleString()} × ${n.toLocaleString()}`],
@@ -291,37 +290,41 @@ const SHORT: Record<BCType, string> = {
   outflow: 'Outflow',
 }
 
-function FaceEditor({ wf, face }: { wf: Workflow; face: Face }) {
-  const { setup, update } = wf
-  const bc = setup.preprocessor.boundaries[face]
-  const unit = setup.preprocessor.temperature_unit === 'C' ? '°C' : 'K'
-  const set = (fn: (b: typeof bc) => void) => update((d) => fn(d.preprocessor.boundaries[face]))
-  const group = (title: string, types: BCType[]) => (
+function BCGroup({ face, title, types, value, onChange }: { face: Face; title: string; types: BCType[]; value: BCType; onChange: (t: BCType) => void }) {
+  return (
     <div>
       <div className="mb-1 text-[10.5px] font-semibold tracking-wide text-slate-400 uppercase">{title}</div>
       <RadioGroup
         className="grid grid-cols-3 gap-1"
         aria-label={`${FACE_INFO[face].name} ${title} condition`}
         // one selection spans both groups: this group shows nothing checked when the type is in the other one
-        value={types.includes(bc.type) ? bc.type : ''}
-        onValueChange={(v) => set((b) => void (b.type = v as BCType))}
+        value={types.includes(value) ? value : ''}
+        onValueChange={(v) => onChange(v as BCType)}
       >
-        {types.map((t) => {
-          const on = bc.type === t
-          return (
-            <Hint key={t} label={`${BC_INFO[t].label}: ${BC_INFO[t].hint}`}>
-              <RadioGroupCard
-                value={t}
-                className="block truncate px-1.5 py-1.5 text-center text-[12px] font-medium text-muted-foreground data-[state=checked]:text-white data-[state=checked]:shadow-sm data-[state=checked]:ring-0"
-                style={on ? { background: BC_INFO[t].color, borderColor: BC_INFO[t].color } : undefined}
-              >
-                {SHORT[t]}
-              </RadioGroupCard>
-            </Hint>
-          )
-        })}
+        {types.map((t) => (
+          <Hint key={t} label={`${BC_INFO[t].label}: ${BC_INFO[t].hint}`}>
+            <RadioGroupCard
+              value={t}
+              className="block truncate px-1.5 py-1.5 text-center text-[12px] font-medium text-muted-foreground"
+              // inline styles, not data-[state=checked]: the Hint (tooltip trigger) overwrites data-state
+              style={value === t ? { background: BC_INFO[t].color, borderColor: BC_INFO[t].color, color: '#fff', boxShadow: 'none' } : undefined}
+            >
+              {SHORT[t]}
+            </RadioGroupCard>
+          </Hint>
+        ))}
       </RadioGroup>
     </div>
+  )
+}
+
+function FaceEditor({ wf, face }: { wf: Workflow; face: Face }) {
+  const { setup, update } = wf
+  const bc = setup.preprocessor.boundaries[face]
+  const unit = setup.preprocessor.temperature_unit === 'C' ? '°C' : 'K'
+  const set = (fn: (b: typeof bc) => void) => update((d) => fn(d.preprocessor.boundaries[face]))
+  const group = (title: string, types: BCType[]) => (
+    <BCGroup face={face} title={title} types={types} value={bc.type} onChange={(t) => set((b) => void (b.type = t))} />
   )
   return (
     <Card>

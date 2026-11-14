@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react'
+import { Hint } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 export interface StepDef {
@@ -16,6 +17,7 @@ export function Stepper({
   isComplete,
   hasError,
   isLocked,
+  collapsed = false,
 }: {
   steps: StepDef[]
   current: number
@@ -23,6 +25,8 @@ export function Stepper({
   isComplete: (id: number) => boolean
   hasError: (id: number) => boolean
   isLocked: (id: number) => boolean
+  /** Icon-rail mode: number badges only, titles in tooltips. */
+  collapsed?: boolean
 }) {
   return (
     <nav aria-label="Solver steps">
@@ -32,15 +36,17 @@ export function Stepper({
           const done = isComplete(s.id) && !active
           const err = hasError(s.id)
           const locked = isLocked(s.id)
-          return (
-            <li key={s.id}>
+          const button = (
               <button
                 type="button"
                 disabled={locked}
                 onClick={() => onSelect(s.id)}
                 aria-current={active ? 'step' : undefined}
+                aria-label={collapsed ? `${s.id}. ${s.title}` : undefined}
                 className={cn(
-                  'flex w-full items-center gap-3 border-l-2 py-2 pr-3 pl-4 text-left text-[13.5px] focus-visible:bg-accent focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40',
+                  'flex w-full items-center gap-3 border-l-2 py-2',
+                  collapsed ? 'justify-center px-0' : 'pr-3 pl-4',
+                  'text-left text-[13.5px] focus-visible:bg-accent focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40',
                   active ? 'border-primary bg-primary-soft text-foreground' : 'border-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
                 )}
               >
@@ -55,11 +61,23 @@ export function Stepper({
                 >
                   {done && !err ? <Check className="size-3" strokeWidth={3} /> : s.id}
                 </span>
-                <span className="min-w-0">
-                  <span className={cn('block leading-tight', active && 'font-medium')}>{s.title}</span>
-                  <span className="block truncate text-[11.5px] text-muted-foreground/80">{s.subtitle}</span>
-                </span>
+                {!collapsed && (
+                  <span className="min-w-0">
+                    <span className={cn('block leading-tight', active && 'font-medium')}>{s.title}</span>
+                    <span className="block truncate text-[11.5px] text-muted-foreground/80">{s.subtitle}</span>
+                  </span>
+                )}
               </button>
+          )
+          return (
+            <li key={s.id}>
+              {collapsed ? (
+                <Hint label={s.title} side="right">
+                  {button}
+                </Hint>
+              ) : (
+                button
+              )}
             </li>
           )
         })}

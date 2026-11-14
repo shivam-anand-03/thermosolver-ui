@@ -31,7 +31,6 @@ export function DomainDiagram({ setup, className, compact = false, highlight }: 
   const dim = p.problem.dimension
   const unit = p.temperature_unit === 'C' ? '°C' : 'K'
   const g = p.geometry
-  const cell = setup.solver.discretization === 'fvm'
   const vel = p.problem.physics !== 'conduction' ? [p.velocity.u, p.velocity.v, p.velocity.w] : [0, 0, 0]
   const stroke = (f: Face) => BC_INFO[p.boundaries[f].type].color
   const width = (f: Face) => (highlight === f ? 6 : 4)
@@ -40,7 +39,7 @@ export function DomainDiagram({ setup, className, compact = false, highlight }: 
     const N = Math.max(2, g.nx)
     const x0 = 70
     const x1 = 330
-    const xs = range(N, 41).map((i) => (cell ? x0 + ((i + 0.5) / N) * (x1 - x0) : x0 + (i / (N - 1)) * (x1 - x0)))
+    const xs = range(N, 41).map((i) => x0 + (i / (N - 1)) * (x1 - x0))
     return (
       <svg viewBox="0 0 400 130" className={className} role="img" aria-label="1-D domain">
         <rect x={x0} y={42} width={x1 - x0} height={30} fill="var(--ui-domain)" stroke="var(--ui-faint)" />
@@ -69,8 +68,8 @@ export function DomainDiagram({ setup, className, compact = false, highlight }: 
     const w = H / aspect > W ? W : H / aspect
     const ox = 70
     const oy = 30
-    const xs = range(g.nx).map((i) => (cell ? ((i + 0.5) / g.nx) * w : (i / (g.nx - 1)) * w))
-    const ys = range(g.ny).map((j) => (cell ? ((j + 0.5) / g.ny) * H : (j / (g.ny - 1)) * H))
+    const xs = range(g.nx).map((i) => (i / (g.nx - 1)) * w)
+    const ys = range(g.ny).map((j) => (j / (g.ny - 1)) * H)
     return (
       <svg viewBox={`0 0 400 ${H + 80}`} className={className} role="img" aria-label="2-D domain">
         <rect x={ox} y={oy} width={w} height={H} fill="var(--ui-domain)" />
@@ -93,7 +92,7 @@ export function DomainDiagram({ setup, className, compact = false, highlight }: 
             label="u"
           />
         )}
-        <text x={ox + w / 2} y={oy + H + 16} textAnchor="middle" className="fill-slate-500 text-[10px]">L = {fmt(g.length, 3)} m · {g.nx} {cell ? 'cells' : 'nodes'}</text>
+        <text x={ox + w / 2} y={oy + H + 16} textAnchor="middle" className="fill-slate-500 text-[10px]">L = {fmt(g.length, 3)} m · {g.nx} nodes</text>
         <text x={ox - 10} y={oy + H / 2} textAnchor="middle" transform={`rotate(-90 ${ox - 10} ${oy + H / 2})`} className="fill-slate-500 text-[10px]">
           W = {fmt(g.width, 3)} m · {g.ny}
         </text>
@@ -131,7 +130,7 @@ export function DomainDiagram({ setup, className, compact = false, highlight }: 
           x = L
         </text>
         <text x={ox + L / 2} y={oy + Wd + 16} textAnchor="middle" className="fill-slate-500 text-[10px]">
-          {g.nx} × {g.ny} × {g.nz} = {(g.nx * g.ny * g.nz).toLocaleString()} {cell ? 'cells' : 'nodes'}
+          {g.nx} × {g.ny} × {g.nz} = {(g.nx * g.ny * g.nz).toLocaleString()} nodes
         </text>
       </svg>
       {!compact && (

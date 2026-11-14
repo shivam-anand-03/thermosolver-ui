@@ -1,24 +1,15 @@
 import {
   ArrowLeft,
   ArrowRight,
-  BarChart3,
   BookOpen,
-  Box,
-  Calculator,
   Check,
   ChevronDown,
   Download,
   FileJson,
   FileText,
   FlaskConical,
-  Grid3x3,
-  Layers,
   PlayCircle,
   RotateCcw,
-  ShieldCheck,
-  SlidersHorizontal,
-  Thermometer,
-  Waves,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Signature } from '@/components/layout/Signature'
@@ -42,49 +33,9 @@ import { ConvergenceStep, MatrixSolverStep, MethodStep, RunStep } from './steps/
 import { ResultsStep, ValidationStep } from './steps/Phase3'
 import { PHASE_THEME, type PhaseKey } from './theme'
 import { useWorkflow } from './useWorkflow'
+import { LAST, PHASES } from './phases'
+import { WorkflowSidebar } from './sidebar/WorkflowSidebar'
 
-interface StepDef {
-  id: number
-  roman: string
-  title: string
-  icon: React.ComponentType<{ className?: string }>
-}
-
-const PHASES: { key: PhaseKey; name: string; title: string; steps: StepDef[] }[] = [
-  {
-    key: 'pre',
-    name: 'Phase I',
-    title: 'Preprocessor',
-    steps: [
-      { id: 1, roman: 'I', title: 'Problem statement', icon: Box },
-      { id: 2, roman: 'II', title: 'Geometry and grid', icon: Grid3x3 },
-      { id: 3, roman: 'III', title: 'Physical phenomena', icon: Waves },
-      { id: 4, roman: 'IV', title: 'Material properties', icon: Layers },
-      { id: 5, roman: 'V', title: 'Initial and boundary conditions', icon: Thermometer },
-    ],
-  },
-  {
-    key: 'solver',
-    name: 'Phase II',
-    title: 'Solver',
-    steps: [
-      { id: 6, roman: 'I', title: 'Numerical method', icon: Calculator },
-      { id: 7, roman: 'II', title: 'Matrix inversion', icon: Grid3x3 },
-      { id: 8, roman: 'III', title: 'Convergence and initialisation', icon: SlidersHorizontal },
-      { id: 9, roman: 'IV', title: 'Solve: run calculation', icon: PlayCircle },
-    ],
-  },
-  {
-    key: 'post',
-    name: 'Phase III',
-    title: 'Post-processing',
-    steps: [
-      { id: 10, roman: 'I', title: 'Results', icon: BarChart3 },
-      { id: 11, roman: 'II', title: 'Validation', icon: ShieldCheck },
-    ],
-  },
-]
-const LAST = 11
 
 export function WorkflowPage() {
   const wf = useWorkflow()
@@ -289,59 +240,7 @@ export function WorkflowPage() {
       </div>
 
       <div className="mx-auto flex max-w-[1600px] min-[1900px]:max-w-[1840px] min-[2300px]:max-w-[2240px]">
-        <aside className="sticky top-[80px] mt-3 ml-3 hidden h-[calc(100vh-92px)] w-64 min-[2300px]:w-72 shrink-0 flex-col overflow-y-auto rounded-2xl border border-slate-200 bg-white py-3 lg:flex">
-          <nav aria-label="Workflow steps" className="px-2">
-            {PHASES.map((ph) => {
-              const th = PHASE_THEME[ph.key]
-              return (
-                <div key={ph.name} className="mb-3">
-                  <div className="flex items-center gap-2 px-2 pt-2 pb-1.5">
-                    <span className="size-2 rounded-full" style={{ background: th.accent }} />
-                    <span className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: th.text }}>
-                      {ph.name}
-                    </span>
-                    <span className="text-[11px] font-medium text-slate-400">{ph.title}</span>
-                  </div>
-                  <ol className="space-y-0.5">
-                    {ph.steps.map((s) => {
-                      const active = s.id === step
-                      const done = !active && !!result && (s.id >= 10 || !wf.stale)
-                      return (
-                        <li key={s.id}>
-                          <button
-                            type="button"
-                            disabled={locked(s.id)}
-                            onClick={() => go(s.id)}
-                            aria-current={active ? 'step' : undefined}
-                            className={cn(
-                              'motion-surface flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[13px] focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40',
-                              active ? 'font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-                            )}
-                            style={active ? { background: th.soft, boxShadow: `inset 3px 0 0 ${th.accent}` } : undefined}
-                          >
-                            <span
-                              className={cn('motion-surface grid h-5 min-w-7 shrink-0 place-items-center rounded px-1 font-mono text-[10.5px] font-semibold', active && 'radial-pop')}
-                              style={
-                                active
-                                  ? { background: th.accent, color: 'var(--ui-on-accent)' }
-                                  : done
-                                    ? { background: th.soft, color: th.text, boxShadow: `inset 0 0 0 1px ${th.ring}` }
-                                    : { boxShadow: 'inset 0 0 0 1px var(--ui-rule)', color: 'var(--ui-muted)' }
-                              }
-                            >
-                              {done ? <Check className="size-3" strokeWidth={3} /> : s.roman}
-                            </span>
-                            <span className="leading-tight">{s.title}</span>
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </ol>
-                </div>
-              )
-            })}
-          </nav>
-        </aside>
+        <WorkflowSidebar step={step} hasResult={!!result} stale={wf.stale} locked={locked} onGo={go} />
 
         <main className="min-w-0 flex-1 px-4 pt-5 pb-6 sm:px-6 lg:px-8 lg:pt-7">
           <div className={step >= 10 ? 'mx-auto max-w-[1280px] min-[1900px]:max-w-[1520px] min-[2300px]:max-w-[1800px]' : 'mx-auto grid max-w-[1280px] min-[1900px]:max-w-[1520px] min-[2300px]:max-w-[1800px] gap-6 2xl:grid-cols-[minmax(0,1fr)_320px] min-[2300px]:grid-cols-[minmax(0,1fr)_380px]'}>

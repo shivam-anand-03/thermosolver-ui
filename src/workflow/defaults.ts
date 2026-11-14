@@ -289,18 +289,17 @@ export function activeMaterial(s: Setup): Material {
   return PHYSICS_INFO[s.preprocessor.problem.physics].material === 'solid' ? s.preprocessor.solid : s.preprocessor.fluid
 }
 
-/** Grid spacing per axis for the chosen discretisation (vertex: L/(N−1), cell: L/N). */
+/** Grid spacing per axis: every method uses a vertex grid, h = L/(N−1). */
 export function spacing(s: Setup): number[] {
   const g = s.preprocessor.geometry
   const dim = s.preprocessor.problem.dimension
-  const cell = s.solver.discretization === 'fvm'
   return [
     [g.length, g.nx],
     [g.width, g.ny],
     [g.height, g.nz],
   ]
     .slice(0, dim)
-    .map(([L, N]) => L / (cell ? N : N - 1))
+    .map(([L, N]) => L / (N - 1))
 }
 
 export function nodeCount(s: Setup): number {
